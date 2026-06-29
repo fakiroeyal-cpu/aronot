@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#b91c1c">
+    <title>ענף תקשורת - מערכת ניהול ארונות</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- Babel compiler -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        html, body {
+            overscroll-behavior-y: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: pan-x pan-y;
+            margin: 0;
+            padding: 0;
+        }
+        input, textarea, select {
+            -webkit-user-select: auto;
+            user-select: auto;
+        }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #c084fc; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a855f7; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect, useRef } = React;
+
+        // --- אייקונים מובנים ---
+        const ServerIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="8" x="2" y="2" rx="2" ry="2" /><rect width="20" height="8" x="2" y="14" rx="2" ry="2" /><line x1="6" x2="6.01" y1="6" y2="6" /><line x1="6" x2="6.01" y1="18" y2="18" /><line x1="10" x2="10.01" y1="6" y2="6" /><line x1="10" x2="10.01" y1="18" y2="18" /></svg>);
+        const MapPinIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></svg>);
+        const WrenchIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" /></svg>);
+        const CheckCircleIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>);
+        const AlertTriangleIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>);
+        const XCircleIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="m15 9-6 6" /><path d="m9 9 6 6" /></svg>);
+        const SearchIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>);
+        const CalendarIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></svg>);
+        const ActivityIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg>);
+        const CloseIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>);
+        const SaveIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></svg>);
+        const NavigationIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11" /></svg>);
+        const InfoIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="16" y2="12" /><line x1="12" x2="12.01" y1="8" y2="8" /></svg>);
+        const EditIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg>);
+        const ChevronUpIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6" /></svg>);
+        const ChevronDownIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>);
+        const LoaderIcon = ({ className }) => (<svg className={`${className} animate-spin`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>);
+        const ShieldAlertIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>);
+        const MapLayoutIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" /><line x1="9" x2="9" y1="3" y2="18" /><line x1="15" x2="15" y1="6" y2="21" /></svg>);
+        const ListIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" x2="21" y1="6" y2="6" /><line x1="8" x2="21" y1="12" y2="12" /><line x1="8" x2="21" y1="18" y2="18" /><line x1="3" x2="3.01" y1="6" y2="6" /><line x1="3" x2="3.01" y1="12" y2="12" /><line x1="3" x2="3.01" y1="18" y2="18" /></svg>);
+        const TrashIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>);
+        const ClipboardListIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="M9 12h6" /><path d="M9 16h6" /><path d="M9 8h6" /></svg>);
+        const LogOutIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></svg>);
+        const UserIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>);
+        const UploadIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" /></svg>);
+        const PlusIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>);
+        const ZoomInIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /><line x1="11" y1="8" x2="11" y2="14" /><line x1="8" y1="11" x2="14" y2="11" /></svg>);
+
+        // --- נתוני דמה להתחלה ---
+        const initialCabinets = [
+          { id: 1, name: 'ארון חניון צפון', city: 'תל אביב', address: 'רחוב דיזנגוף 50', description: 'ארון ראשי, חניון תת קרקעי קומה -1 צמוד למעליות', wazeLink: 'https://waze.com/ul?ll=32.0744,34.7765&navigate=yes', status: 'active', installationDate: '2023-01-15', warrantyEndDate: '2024-01-15', imageUrl: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=150&q=80', lastServiceDate: '2024-05-10', notes: [{ date: '2024-05-10', text: 'בדיקה שגרתית, הכל תקין.', author: 'אייל' }] },
+          { id: 2, name: 'ארון קניון עזריאלי', city: 'תל אביב', address: 'דרך מנחם בגין 132', description: 'ארון תקשורת חיצוני, כניסה לחניון המערבי', wazeLink: 'https://waze.com/ul?ll=32.0744,34.7925&navigate=yes', status: 'active', installationDate: '2026-11-20', warrantyEndDate: '2027-11-20', imageUrl: '', lastServiceDate: '2026-06-25', notes: [{ date: '2026-06-25', text: 'החלפת נתב נדרשת, כרגע עובד על גיבוי סלולרי.', author: 'אדיר' }] },
+          { id: 3, name: 'ארון שוק מחנה יהודה', city: 'ירושלים', address: 'רחוב עץ חיים', description: 'ארון עליון מעל הכניסה לשוק המקורה', wazeLink: 'https://waze.com/ul?ll=31.7850,35.2120&navigate=yes', status: 'active', installationDate: '2024-08-05', warrantyEndDate: '2025-08-05', imageUrl: '', lastServiceDate: '2026-01-12', notes: [] },
+        ];
+
+        const getEffectiveStatus = (cabinet) => {
+          if (!cabinet) return 'offline';
+          if (cabinet.status === 'offline') return 'offline';
+          
+          const now = new Date();
+          const isWarrantyExpired = cabinet.warrantyEndDate && now > new Date(cabinet.warrantyEndDate);
+          
+          let isOneYearPassed = false;
+          if (cabinet.installationDate) {
+            const instDate = new Date(cabinet.installationDate);
+            instDate.setFullYear(instDate.getFullYear() + 1);
+            if (now > instDate) {
+              isOneYearPassed = true;
+            }
+          }
+
+          if (isWarrantyExpired || isOneYearPassed) return 'maintenance';
+          return 'active';
+        };
+
+        const StatusBadge = ({ cabinet }) => {
+          if (!cabinet) return null;
+          const effectiveStatus = getEffectiveStatus(cabinet);
+          
+          switch (effectiveStatus) {
+            case 'active':
+              return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200"><CheckCircleIcon className="w-3.5 h-3.5" /> פעיל ותקין</span>;
+            case 'maintenance':
+              return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 border border-yellow-200"><AlertTriangleIcon className="w-3.5 h-3.5" /> הסתיימה אחריות</span>;
+            case 'offline':
+              return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200"><XCircleIcon className="w-3.5 h-3.5" /> תקלה</span>;
+            default:
+              return null;
+          }
+        };
+
+        const MapView = ({ cabinets, onOpenCabinet }) => {
+          const mapRef = useRef(null);
+          const mapInstance = useRef(null);
+          const [isLoaded, setIsLoaded] = useState(false);
+
+          useEffect(() => {
+            if (document.getElementById('leaflet-css')) {
+                if (window.L) setIsLoaded(true);
+            } else {
+                const link = document.createElement('link');
+                link.id = 'leaflet-css';
+                link.rel = 'stylesheet';
+                link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                document.head.appendChild(link);
+
+                const script = document.createElement('script');
+                script.id = 'leaflet-js';
+                script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                script.onload = () => setIsLoaded(true);
+                document.head.appendChild(script);
+            }
+          }, []);
+
+          useEffect(() => {
+            if (!isLoaded || !mapRef.current) return;
+
+            if (!mapInstance.current) {
+              mapInstance.current = window.L.map(mapRef.current).setView([31.5, 34.8], 8);
+              window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+              }).addTo(mapInstance.current);
+            }
+
+            const map = mapInstance.current;
+            map.eachLayer((layer) => {
+              if (layer instanceof window.L.Marker) map.removeLayer(layer);
+            });
+
+            const boundsCoords = [];
+
+            cabinets.forEach(cab => {
+              let lat = null, lng = null;
+              if (cab.wazeLink) {
+                 const wazeMatch = cab.wazeLink.match(/ll=([0-9.-]+),([0-9.-]+)/);
+                 const googleMatch = cab.wazeLink.match(/q=([0-9.-]+),([0-9.-]+)/);
+                 const atMatch = cab.wazeLink.match(/@([0-9.-]+),([0-9.-]+)/);
+                 
+                 if (wazeMatch) { lat = parseFloat(wazeMatch[1]); lng = parseFloat(wazeMatch[2]); }
+                 else if (googleMatch) { lat = parseFloat(googleMatch[1]); lng = parseFloat(googleMatch[2]); }
+                 else if (atMatch) { lat = parseFloat(atMatch[1]); lng = parseFloat(atMatch[2]); }
+              }
+              
+              if (lat && lng) {
+                boundsCoords.push([lat, lng]);
+                const effectiveStatus = getEffectiveStatus(cab);
+                
+                let color = '#22c55e';
+                if (effectiveStatus === 'offline') color = '#ef4444';
+                if (effectiveStatus === 'maintenance') color = '#f59e0b';
+
+                const customIcon = window.L.divIcon({
+                    className: 'custom-pin',
+                    html: `<div style="background-color: ${color}; width: 18px; height: 18px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.4);"></div>`,
+                    iconSize: [18, 18],
+                    iconAnchor: [9, 9]
+                });
+
+                const marker = window.L.marker([lat, lng], { icon: customIcon }).addTo(map);
+                
+                const popupContent = document.createElement('div');
+                popupContent.innerHTML = `
+                  <div style="text-align: right; font-family: inherit; min-width: 150px;" dir="rtl">
+                    <strong style="font-size: 14px; display: block; margin-bottom: 4px;">${cab.name || ''}</strong>
+                    <div style="font-size: 12px; color: #666; margin-bottom: 12px;">${cab.city || ''}, ${cab.address || ''}</div>
+                    <div style="display: flex; gap: 8px;">
+                      <button id="btn-manage-${cab.id}" style="background: #2563eb; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%; font-family: inherit; font-weight: bold;">ניהול ארון</button>
+                    </div>
+                  </div>
+                `;
+                
+                marker.bindPopup(popupContent);
+                marker.on('popupopen', () => {
+                    const btnManage = document.getElementById(`btn-manage-${cab.id}`);
+                    if (btnManage) btnManage.onclick = () => onOpenCabinet(cab);
+                });
+              }
+            });
+
+            if (boundsCoords.length > 0) {
+                const bounds = window.L.latLngBounds(boundsCoords);
+                map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+            }
+
+          }, [isLoaded, cabinets, onOpenCabinet]);
+
+          return (
+            <div className="relative w-full h-[600px] bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+               {!isLoaded && (
+                 <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                   <LoaderIcon className="w-8 h-8 text-blue-500 animate-spin" />
+                   <span className="ml-2 mr-2 text-gray-500">טוען מפה...</span>
+                 </div>
+               )}
+               <div ref={mapRef} style={{ width: '100%', height: '100%', zIndex: 1 }} />
+            </div>
+          );
+        };
+
+        function App() {
+          // שילוב מפתחות הענן של המשתמש:
+          const firebaseConfig = {
+            apiKey: "AIzaSyB6_qqre6SWqw8J155PzD3fnvXwmnMv04E",
+            authDomain: "aronot-d4bfb.firebaseapp.com",
+            projectId: "aronot-d4bfb",
+            storageBucket: "aronot-d4bfb.firebasestorage.app",
+            messagingSenderId: "936688002844",
+            appId: "1:936688002844:web:61eb6c8fbd6c0ead043cd9"
+          };
+
+          const [isLocalMode, setIsLocalMode] = useState(false);
+          const [authError, setAuthError] = useState(false);
+          
+          const [currentUser, setCurrentUser] = useState(() => {
+            try {
+              const savedUser = localStorage.getItem('cabinetManagerUser');
+              return savedUser ? JSON.parse(savedUser) : { name: 'אייל (כניסה אוטומטית)', role: 'admin' };
+            } catch (e) {
+              return { name: 'אייל (כניסה אוטומטית)', role: 'admin' };
+            }
+          });
+          
+          const [loginUsername, setLoginUsername] = useState('');
+          const [loginPassword, setLoginPassword] = useState('');
+          const [loginError, setLoginError] = useState('');
+
+          const [cabinets, setCabinets] = useState([]);
+          
+          const [fb, setFb] = useState(null);
+          const [fbUser, setFbUser] = useState(null);
+
+          // התחברות ל-Firebase עם המפתחות האמיתיים וטיפול בשגיאות
+          useEffect(() => {
+             let isMounted = true;
+             let unsubscribeAuth = null;
+
+             const initFirebase = async () => {
+                 try {
+                     const { initializeApp } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js');
+                     const { getAuth, signInAnonymously, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
+                     const { getFirestore, collection, doc, setDoc, onSnapshot, updateDoc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
+                     
+                     const app = initializeApp(firebaseConfig);
+                     const auth = getAuth(app);
+                     const db = getFirestore(app);
+
+                     try {
+                         await signInAnonymously(auth);
+                     } catch (authErr) {
+                         if (authErr.code === 'auth/configuration-not-found' || authErr.code === 'auth/operation-not-allowed') {
+                             if (isMounted) setAuthError(true);
+                             return; // עוצרים הכל עד שהמשתמש ידליק התחברות אנונימית
+                         }
+                         throw authErr;
+                     }
+
+                     if (isMounted) {
+                         setFb({ db, collection, doc, setDoc, onSnapshot, updateDoc, deleteDoc });
+                     }
+
+                     unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+                         if (isMounted) setFbUser(user);
+                     });
+
+                 } catch (e) {
+                     console.error("Firebase init failed, switching to local mode:", e);
+                     if (isMounted) setIsLocalMode(true);
+                 }
+             };
+
+             initFirebase();
+             return () => { 
+                 isMounted = false; 
+                 if (unsubscribeAuth) unsubscribeAuth();
+             };
+          }, []);
+
+          // סנכרון עם ענן הנתונים
+          useEffect(() => {
+             if (isLocalMode || authError || !fb || !fbUser) return;
+             
+             // הגדרת נתיב שמירה מאובטח
+             const cabinetsRef = fb.collection(fb.db, 'artifacts', 'aronot', 'public', 'data', 'cabinets');
+
+             const unsubscribe = fb.onSnapshot(cabinetsRef, (snapshot) => {
+                 if (snapshot.empty && !window.__data_initialized) {
+                     window.__data_initialized = true;
+                     initialCabinets.forEach((cab, i) => {
+                         const newCab = { ...cab, order: Date.now() - i * 1000 };
+                         fb.setDoc(fb.doc(cabinetsRef, cab.id.toString()), newCab);
+                     });
+                 } else {
+                     const loaded = [];
+                     snapshot.forEach(d => loaded.push({ ...d.data(), id: parseInt(d.id) }));
+                     loaded.sort((a, b) => b.order - a.order);
+                     setCabinets(loaded);
+                 }
+             }, (error) => {
+                 console.error("Snapshot error:", error);
+                 setIsLocalMode(true); 
+             });
+
+             return () => unsubscribe();
+          }, [isLocalMode, authError, fb, fbUser]);
+
+          // פונקציית עזר לשליפת ארון ספציפי מהענן
+          const getCabinetRef = (id) => {
+              return fb.doc(fb.db, 'artifacts', 'aronot', 'public', 'data', 'cabinets', id.toString());
+          };
+
+          const [searchQuery, setSearchQuery] = useState('');
+          const [filterStatus, setFilterStatus] = useState('all');
+          const [filterCity, setFilterCity] = useState('all');
+          const [viewMode, setViewMode] = useState('list'); 
+          
+          const [selectedCabinetId, setSelectedCabinetId] = useState(null);
+          const activeCabinet = cabinets.find(c => c.id === selectedCabinetId);
+
+          const [isAddingNew, setIsAddingNew] = useState(false);
+          const [newCabinetForm, setNewCabinetForm] = useState({
+            name: '', city: '', address: '', description: '', wazeLink: '', imageUrl: '', installationDate: '', warrantyEndDate: ''
+          });
+
+          const [newNote, setNewNote] = useState('');
+          const [newNoteDate, setNewNoteDate] = useState(new Date().toISOString().split('T')[0]);
+          const [isEditingInfo, setIsEditingInfo] = useState(false);
+          
+          const [editForm, setEditForm] = useState({ 
+            name: '', city: '', address: '', description: '', wazeLink: '', imageUrl: '', installationDate: '', warrantyEndDate: ''
+          });
+          
+          const [gpsStatus, setGpsStatus] = useState('');
+          const [isUploadingImg, setIsUploadingImg] = useState(false);
+          const [fullScreenImage, setFullScreenImage] = useState(null);
+          
+          const [toastMsg, setToastMsg] = useState('');
+          const [cabinetToDelete, setCabinetToDelete] = useState(null);
+
+          const showToast = (msg) => {
+              setToastMsg(msg);
+              setTimeout(() => setToastMsg(''), 3500);
+          };
+
+          useEffect(() => {
+              if (selectedCabinetId && cabinets.length > 0) {
+                  if (!cabinets.find(c => c.id === selectedCabinetId)) {
+                      setSelectedCabinetId(null);
+                      showToast("הארון נמחק על ידי משתמש אחר ברשת.");
+                  }
+              }
+          }, [cabinets, selectedCabinetId]);
+
+          const handleLogin = (e) => {
+            e.preventDefault();
+            if ((loginUsername === 'אייל' || loginUsername === 'אדיר') && loginPassword === '123') {
+              const user = { name: loginUsername, role: 'admin' };
+              setCurrentUser(user);
+              localStorage.setItem('cabinetManagerUser', JSON.stringify(user));
+              setLoginError('');
+            } else {
+              setLoginError('שם משתמש או סיסמא שגויים. נסה שוב.');
+            }
+          };
+
+          const handleLogout = () => {
+            setCurrentUser(null);
+            localStorage.removeItem('cabinetManagerUser');
+            setLoginUsername('');
+            setLoginPassword('');
+            setLoginError('');
+          };
+
+          const handleImageUpload = (e, isNew = false) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            setIsUploadingImg(true);
+            
+            setTimeout(() => {
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                  const canvas = document.createElement('canvas');
+                  const MAX_WIDTH = 500;
+                  const MAX_HEIGHT = 500;
+                  let width = img.width;
+                  let height = img.height;
+
+                  if (width > height) {
+                    if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                  } else {
+                    if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+                  }
+                  
+                  canvas.width = width;
+                  canvas.height = height;
+                  const ctx = canvas.getContext('2d');
+                  ctx.drawImage(img, 0, 0, width, height);
+                  
+                  const dataUrl = canvas.toDataURL('image/jpeg', 0.5); 
+                  
+                  if (isNew) {
+                      setNewCabinetForm(prev => ({...prev, imageUrl: dataUrl}));
+                  } else {
+                      setEditForm(prev => ({...prev, imageUrl: dataUrl}));
+                  }
+                  setIsUploadingImg(false);
+                };
+                img.src = event.target.result;
+              };
+              reader.readAsDataURL(file);
+            }, 50); 
+          };
+
+          const handleGetLocation = (isNew = false) => {
+            setGpsStatus('מחפש מיקום (GPS)... ⏳');
+            if (navigator.geolocation) {
+              navigator.geolocation.getCurrentPosition(
+                (position) => {
+                  const lat = position.coords.latitude;
+                  const lng = position.coords.longitude;
+                  const link = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+                  if (isNew) {
+                      setNewCabinetForm(prev => ({...prev, wazeLink: link}));
+                  } else {
+                      setEditForm(prev => ({...prev, wazeLink: link}));
+                  }
+                  setGpsStatus('✅ המיקום הנוכחי שלך נדגם בהצלחה!');
+                  setTimeout(() => setGpsStatus(''), 4000);
+                },
+                (error) => {
+                  setGpsStatus('❌ שגיאה: נא לוודא ששירותי המיקום (GPS) דלוקים במכשיר.');
+                  setTimeout(() => setGpsStatus(''), 4000);
+                },
+                { enableHighAccuracy: true }
+              );
+            } else {
+              setGpsStatus('❌ הדפדפן שלך לא תומך בקריאת מיקום.');
+            }
+          };
+
+          const handleInstallationDateChange = (e, isNew = false) => {
+            const newDate = e.target.value;
+            let endWarrantyDate = '';
+            
+            if (newDate) {
+                const dateObj = new Date(newDate);
+                dateObj.setFullYear(dateObj.getFullYear() + 1);
+                endWarrantyDate = dateObj.toISOString().split('T')[0];
+            }
+
+            if (isNew) {
+                setNewCabinetForm(prev => ({...prev, installationDate: newDate, warrantyEndDate: endWarrantyDate}));
+            } else {
+                setEditForm(prev => ({...prev, installationDate: newDate, warrantyEndDate: endWarrantyDate}));
+            }
+          };
+
+          const handleCreateCabinet = async () => {
+            if (!newCabinetForm.name || !newCabinetForm.city) {
+                alert("חובה להזין לפחות את שם הארון והעיר!");
+                return;
+            }
+            
+            const newCab = {
+                id: Date.now(),
+                ...newCabinetForm,
+                status: 'active',
+                lastServiceDate: '',
+                notes: [],
+                order: Date.now()
+            };
+
+            setIsAddingNew(false);
+            setNewCabinetForm({ name: '', city: '', address: '', description: '', wazeLink: '', imageUrl: '', installationDate: '', warrantyEndDate: '' });
+            
+            if (isLocalMode) {
+                setCabinets(prev => [newCab, ...prev]);
+                showToast("הארון הוסף בהצלחה למכשיר שלך!");
+                return;
+            }
+
+            if (fb && fbUser) {
+                await fb.setDoc(getCabinetRef(newCab.id), newCab);
+                showToast("הארון הוסף בהצלחה לענן!");
+            }
+          };
+
+          const isFilterActive = searchQuery !== '' || filterStatus !== 'all' || filterCity !== 'all';
+
+          const moveCabinetById = async (id, direction) => {
+            if (isFilterActive) return;
+            const index = cabinets.findIndex(c => c && c.id === id);
+            if (index === -1) return;
+            
+            let swapIndex = direction === 'up' ? index - 1 : index + 1;
+            if (swapIndex < 0 || swapIndex >= cabinets.length) return;
+
+            const curr = cabinets[index];
+            const swap = cabinets[swapIndex];
+
+            if (isLocalMode) {
+                const newCabinets = [...cabinets];
+                const tempOrder = newCabinets[index].order;
+                newCabinets[index].order = newCabinets[swapIndex].order;
+                newCabinets[swapIndex].order = tempOrder;
+                newCabinets.sort((a,b) => b.order - a.order);
+                setCabinets(newCabinets);
+                return;
+            }
+
+            if (fb && fbUser) {
+                await fb.updateDoc(getCabinetRef(curr.id), { order: swap.order });
+                await fb.updateDoc(getCabinetRef(swap.id), { order: curr.order });
+            }
+          };
+
+          const uniqueCities = useMemo(() => {
+            return [...new Set(cabinets.filter(Boolean).map(c => c.city))].sort();
+          }, [cabinets]);
+
+          const stats = useMemo(() => {
+            const validCabinets = cabinets.filter(Boolean);
+            return {
+              total: validCabinets.length,
+              active: validCabinets.filter(c => getEffectiveStatus(c) === 'active').length,
+              maintenance: validCabinets.filter(c => getEffectiveStatus(c) === 'maintenance').length,
+              offline: validCabinets.filter(c => getEffectiveStatus(c) === 'offline').length,
+            };
+          }, [cabinets]);
+
+          const filteredCabinets = useMemo(() => {
+            return cabinets.filter(cabinet => {
+              if (!cabinet) return false;
+              const matchesSearch = (cabinet.name || '').includes(searchQuery) || (cabinet.address || '').includes(searchQuery) || (cabinet.city || '').includes(searchQuery);
+              const effectiveStatus = getEffectiveStatus(cabinet);
+              const matchesStatus = filterStatus === 'all' || effectiveStatus === filterStatus;
+              const matchesCity = filterCity === 'all' || cabinet.city === filterCity;
+              return matchesSearch && matchesStatus && matchesCity;
+            });
+          }, [cabinets, searchQuery, filterStatus, filterCity]);
+
+          const handleUpdateStatus = async (id, newStatus) => {
+            if (!activeCabinet) return;
+            const statusMap = { 'active': 'פעיל', 'offline': 'תקלה' };
+            const today = new Date().toISOString().split('T')[0];
+            const newNoteObj = { date: today, text: `עדכון מערכת: הסטטוס שונה ידנית ל-${statusMap[newStatus] || newStatus}`, author: currentUser?.name || 'מערכת' };
+            const updatedNotes = [newNoteObj, ...(activeCabinet.notes || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            if (isLocalMode) {
+                setCabinets(prev => prev.map(cab => cab.id === id ? { ...cab, status: newStatus, notes: updatedNotes, order: Date.now() } : cab));
+                showToast("הסטטוס התעדכן והארון הוקפץ לראש הרשימה!");
+                return;
+            }
+
+            if (fb && fbUser) {
+                await fb.updateDoc(getCabinetRef(id), { status: newStatus, notes: updatedNotes, order: Date.now() });
+                showToast("הסטטוס התעדכן בענן והארון הוקפץ לראש הרשימה!");
+            }
+          };
+
+          const handleAddNote = async () => {
+            if (!newNote.trim() || !activeCabinet || !currentUser) return;
+
+            const newNoteObj = { date: newNoteDate, text: newNote, author: currentUser?.name || 'מערכת' };
+            const updatedNotes = [newNoteObj, ...(activeCabinet.notes || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const newLastServiceDate = updatedNotes.length > 0 ? updatedNotes[0].date : activeCabinet.lastServiceDate;
+
+            setNewNote('');
+            setNewNoteDate(new Date().toISOString().split('T')[0]);
+
+            if (isLocalMode) {
+                setCabinets(prev => prev.map(cab => cab.id === activeCabinet.id ? { ...cab, notes: updatedNotes, lastServiceDate: newLastServiceDate, order: Date.now() } : cab));
+                showToast("הדיווח נשמר והארון הוקפץ לראש הרשימה!");
+                return;
+            }
+
+            if (fb && fbUser) {
+                await fb.updateDoc(getCabinetRef(activeCabinet.id), { notes: updatedNotes, lastServiceDate: newLastServiceDate, order: Date.now() });
+                showToast("הדיווח נשמר בענן והארון הוקפץ לראש הרשימה!");
+            }
+          };
+
+          const handleDeleteNote = async (noteIndex) => {
+            if (!activeCabinet) return;
+            const updatedNotes = (activeCabinet.notes || []).filter((_, i) => i !== noteIndex);
+            const newLastServiceDate = updatedNotes.length > 0 ? updatedNotes[0].date : activeCabinet.installationDate;
+
+            if (isLocalMode) {
+                setCabinets(prev => prev.map(cab => cab.id === activeCabinet.id ? { ...cab, notes: updatedNotes, lastServiceDate: newLastServiceDate } : cab));
+                return;
+            }
+
+            if (fb && fbUser) {
+                await fb.updateDoc(getCabinetRef(activeCabinet.id), { notes: updatedNotes, lastServiceDate: newLastServiceDate });
+            }
+          };
+
+          const handleOpenCabinet = (cabinet) => {
+            if (!cabinet) return;
+            setSelectedCabinetId(cabinet.id);
+            setIsEditingInfo(false);
+            setGpsStatus('');
+          };
+
+          const startEditing = () => {
+            setEditForm({ 
+              name: activeCabinet.name || '',
+              city: activeCabinet.city || '',
+              address: activeCabinet.address || '',
+              description: activeCabinet.description || '', 
+              wazeLink: activeCabinet.wazeLink || '',
+              imageUrl: activeCabinet.imageUrl || '',
+              installationDate: activeCabinet.installationDate || '',
+              warrantyEndDate: activeCabinet.warrantyEndDate || ''
+            });
+            setIsEditingInfo(true);
+            const scrollArea = document.getElementById('modal-scroll-area');
+            if (scrollArea) scrollArea.scrollTop = 0;
+          };
+
+          const handleSaveInfo = async () => {
+            if (!activeCabinet) return;
+            const today = new Date().toISOString().split('T')[0];
+            const newNoteObj = { date: today, text: `עדכון מערכת: פרטי הארון נערכו בהצלחה`, author: currentUser?.name || 'מערכת' };
+            const updatedNotes = [newNoteObj, ...(activeCabinet.notes || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            const updates = {
+                name: editForm.name,
+                city: editForm.city,
+                address: editForm.address,
+                description: editForm.description, 
+                wazeLink: editForm.wazeLink,
+                imageUrl: editForm.imageUrl,
+                installationDate: editForm.installationDate,
+                warrantyEndDate: editForm.warrantyEndDate,
+                notes: updatedNotes,
+                order: Date.now()
+            };
+
+            setIsEditingInfo(false);
+
+            if (isLocalMode) {
+                setCabinets(prev => prev.map(cab => cab.id === activeCabinet.id ? { ...cab, ...updates } : cab));
+                showToast("הפרטים נשמרו בהצלחה למכשיר!");
+                return;
+            }
+
+            if (fb && fbUser) {
+                await fb.updateDoc(getCabinetRef(activeCabinet.id), updates);
+                showToast("הפרטים נשמרו בענן והתעדכנו אצל כולם!");
+            }
+          };
+
+          const handleDeleteCabinet = async (id) => {
+              setCabinetToDelete(null);
+              setSelectedCabinetId(null);
+              
+              if (isLocalMode) {
+                  setCabinets(prev => prev.filter(c => c.id !== id));
+                  showToast("הארון נמחק במכשיר שלך!");
+                  return;
+              }
+
+              if (fb && fbUser) {
+                  await fb.deleteDoc(getCabinetRef(id));
+                  showToast("הארון נמחק בהצלחה לצמיתות משרת הענן!");
+              }
+          };
+
+          // --- מסך שגיאת פיירבייס - מסביר למשתמש בדיוק איך לתקן ב-Console ---
+          if (authError) {
+              return (
+                  <div dir="rtl" className="min-h-screen bg-gray-50 flex flex-col justify-center items-center p-6 font-sans text-center">
+                      <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-red-200">
+                          <ShieldAlertIcon className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                          <h2 className="text-2xl font-black text-gray-900 mb-3">כמעט סיימנו! 🔒</h2>
+                          <p className="text-sm text-gray-600 mb-6 leading-relaxed">
+                              כדי שהמערכת תוכל להסתנכרן בין כל הטלפונים, צריך לאפשר לחשבונות "אנונימיים" להתחבר למסד הנתונים שלך ב-Firebase.
+                          </p>
+                          <div className="text-right text-sm text-gray-700 bg-gray-50 p-4 rounded-lg border border-gray-100 mb-6">
+                              <p className="font-bold text-gray-900 mb-3">איך מתקנים ב-3 לחיצות?</p>
+                              <ol className="list-decimal list-inside space-y-2.5">
+                                  <li>כנס לאתר Firebase ולחץ על הפרויקט שלך.</li>
+                                  <li>בתפריט השמאלי, לחץ על <b>Authentication</b>.</li>
+                                  <li>לחץ על הכפתור הלבן <b>Get started</b> (אם הוא מופיע).</li>
+                                  <li>עבור ללשונית <b>Sign-in method</b> למעלה.</li>
+                                  <li>ברשימה למטה בחר ב-<b>Anonymous</b> (אנונימי), הדלק את המתג ל-Enable, ולחץ Save.</li>
+                              </ol>
+                          </div>
+                          <button onClick={() => window.location.reload()} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 px-4 rounded-xl transition-colors shadow-md text-lg">
+                              עשיתי את זה, רענן עמוד!
+                          </button>
+                      </div>
+                  </div>
+              );
+          }
+
+          if (dbError) {
+              return (
+                  <div dir="rtl" className="min-h-screen bg-gray-50 flex flex-col justify-center items-center p-6 font-sans text-center">
+                      <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-red-200">
+                          <ServerIcon className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                          <h2 className="text-2xl font-black text-gray-900 mb-3">שדרוג למערכת ענן! ☁️</h2>
+                          <p className="text-sm text-gray-600 mb-6 leading-relaxed">
+                              ביקשת שהמערכת תעבוד ברשת עבור <b>כמה טלפונים במקביל</b>. 
+                              כדי שזה יעבוד ויתעדכן בזמן אמת, המערכת מחוברת כעת לשרת נתונים אמיתי (Firebase) ולא יכולה לרוץ יותר כקובץ מנותק בוואטסאפ.
+                          </p>
+                          <div className="bg-blue-50 text-blue-800 p-4 rounded-xl text-sm font-bold border border-blue-200">
+                              אנא פתח את הקישור החי (URL) ששיתפתי איתך בדפדפן, במקום להוריד ולפתוח את הקובץ.
+                          </div>
+                      </div>
+                  </div>
+              );
+          }
+
+          if (!currentUser) {
+            return (
+              <div dir="rtl" className="min-h-screen bg-gray-100 flex flex-col justify-center items-center p-4 font-sans">
+                <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-gray-200">
+                  <div className="flex flex-col items-center justify-center mb-8">
+                    <div className="bg-white p-3 rounded-2xl mb-4 shadow-sm border border-gray-100 w-32 h-32 flex items-center justify-center overflow-hidden">
+                      <img src="לוגו.jpeg" alt="לוגו ענף תקשורת" className="w-full h-full object-contain" onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/200x200/dc2626/white?text=LOGO'; }}/>
+                    </div>
+                    <h2 className="text-3xl font-black text-gray-900 tracking-tight text-center">ענף תקשורת</h2>
+                    <p className="text-sm text-gray-500 mt-1 font-medium text-center">מערכת מחוברת ענן</p>
+                  </div>
+                  
+                  <form onSubmit={handleLogin} className="space-y-5">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">שם משתמש</label>
+                      <input type="text" placeholder="הזן שם משתמש (אייל / אדיר)" className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-gray-50 text-gray-900 transition-colors" value={loginUsername} onChange={(e) => setLoginUsername(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">סיסמא</label>
+                      <input type="password" placeholder="הזן סיסמא (למשל 123)" className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-gray-50 text-gray-900 transition-colors" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} />
+                    </div>
+                    
+                    {loginError && (
+                      <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg border border-red-100 flex items-center gap-2">
+                        <AlertTriangleIcon className="w-4 h-4" /> {loginError}
+                      </div>
+                    )}
+                    
+                    <button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-md hover:shadow-lg mt-2">
+                      <UserIcon className="w-5 h-5" /> כניסה למערכת
+                    </button>
+                  </form>
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div dir="rtl" className="min-h-screen bg-gray-50 text-gray-900 font-sans pb-10 relative">
+              
+              {toastMsg && (
+                  <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[200] bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-2 animate-bounce">
+                      <CheckCircleIcon className="w-5 h-5 text-green-400" />
+                      <span className="font-bold text-sm whitespace-nowrap">{toastMsg}</span>
+                  </div>
+              )}
+
+              {cabinetToDelete && (
+                  <div className="fixed inset-0 z-[100] bg-black bg-opacity-60 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setCabinetToDelete(null)}>
+                      <div className="bg-white rounded-2xl p-6 text-center shadow-2xl max-w-sm w-full" onClick={e => e.stopPropagation()}>
+                          <div className="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                              <TrashIcon className="w-8 h-8 text-red-600" />
+                          </div>
+                          <h3 className="text-xl font-black text-gray-900 mb-2">מחיקת ארון</h3>
+                          <p className="text-sm text-gray-600 mb-6 font-medium">האם אתה בטוח שברצונך למחוק לחלוטין את הארון מהמערכת? פעולה זו תמחק אותו אצל כולם ולא ניתנת לביטול.</p>
+                          <div className="flex gap-3 justify-center">
+                              <button onClick={() => setCabinetToDelete(null)} className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors">ביטול</button>
+                              <button onClick={() => handleDeleteCabinet(cabinetToDelete)} className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors shadow-md">כן, מחק ארון</button>
+                          </div>
+                      </div>
+                  </div>
+              )}
+
+              {fullScreenImage && (
+                <div className="fixed inset-0 z-[100] bg-black bg-opacity-95 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setFullScreenImage(null)}>
+                  <button className="absolute top-6 right-6 text-white bg-black bg-opacity-50 hover:bg-opacity-80 rounded-full p-2 transition-all shadow-lg" onClick={() => setFullScreenImage(null)}>
+                    <CloseIcon className="w-8 h-8" />
+                  </button>
+                  <img src={fullScreenImage} className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl" onClick={(e) => e.stopPropagation()} alt="הגדלת תמונה" />
+                </div>
+              )}
+
+              <header className="bg-red-700 text-white shadow-md border-b border-red-800">
+                <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2 sm:gap-4">
+                    <div className="bg-white p-1 rounded-lg shadow-sm flex items-center justify-center w-10 h-10 sm:w-14 sm:h-14 overflow-hidden">
+                      <img src="לוגו.jpeg" alt="לוגו ענף תקשורת" className="w-full h-full object-contain" onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/100x100/dc2626/white?text=LOGO'; }}/>
+                    </div>
+                    <div className="flex flex-col">
+                      <h1 className="text-lg sm:text-2xl font-black tracking-tight flex items-center gap-1 sm:gap-2">
+                        ענף תקשורת <span className="font-normal text-red-200 hidden sm:inline">|</span> <span className="text-sm sm:text-lg font-medium hidden sm:inline text-red-100">מערכת מחוברת ענן</span>
+                      </h1>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 sm:gap-3">
+                    <div className="text-xs sm:text-sm bg-red-800 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full border border-red-600 flex items-center gap-1 sm:gap-2 shadow-inner">
+                      <UserIcon className="w-3 h-3 sm:w-4 sm:h-4 text-red-200" />
+                      <span className="font-medium truncate max-w-[80px] sm:max-w-none">{currentUser?.name || ''}</span>
+                    </div>
+                    <button onClick={handleLogout} className="text-sm text-red-100 hover:text-white hover:bg-red-800 p-1.5 sm:p-2 rounded-lg transition-colors border border-transparent hover:border-red-600" title="התנתק יציאה מהמערכת">
+                      <LogOutIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                  </div>
+                </div>
+              </header>
+
+              <main className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-4 sm:py-8">
+                
+                <div className="mb-6 flex justify-end">
+                    <button onClick={() => setIsAddingNew(true)} className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-95 border-2 border-green-500 hover:border-green-400">
+                        <PlusIcon className="w-6 h-6" /> הוסף ארון חדש
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-8">
+                  <button onClick={() => setFilterStatus('all')} className={`text-right bg-white p-4 sm:p-6 rounded-xl shadow-sm border-2 transition-all flex flex-col justify-center gap-2 ${filterStatus === 'all' ? 'border-blue-500 bg-blue-50' : 'border-gray-100 hover:border-blue-200'}`}>
+                    <div className="bg-blue-100 p-2 sm:p-3 rounded-lg text-blue-600 w-fit"><ServerIcon className="w-5 h-5 sm:w-6 sm:h-6" /></div>
+                    <div>
+                      <p className="text-xs sm:text-sm text-gray-500 font-medium">סה"כ ארונות</p>
+                      <p className="text-xl sm:text-2xl font-bold">{stats.total}</p>
+                    </div>
+                  </button>
+                  
+                  <button onClick={() => setFilterStatus('active')} className={`text-right bg-white p-4 sm:p-6 rounded-xl shadow-sm border-2 transition-all flex flex-col justify-center gap-2 ${filterStatus === 'active' ? 'border-green-500 bg-green-50' : 'border-gray-100 hover:border-green-200'}`}>
+                    <div className="bg-green-100 p-2 sm:p-3 rounded-lg text-green-600 w-fit"><CheckCircleIcon className="w-5 h-5 sm:w-6 sm:h-6" /></div>
+                    <div>
+                      <p className="text-xs sm:text-sm text-gray-500 font-medium">פעילים תקינים</p>
+                      <p className="text-xl sm:text-2xl font-bold">{stats.active}</p>
+                    </div>
+                  </button>
+                  
+                  <button onClick={() => setFilterStatus('maintenance')} className={`text-right bg-white p-4 sm:p-6 rounded-xl shadow-sm border-2 transition-all flex flex-col justify-center gap-2 ${filterStatus === 'maintenance' ? 'border-yellow-500 bg-yellow-50' : 'border-gray-100 hover:border-yellow-200'}`}>
+                    <div className="bg-yellow-100 p-2 sm:p-3 rounded-lg text-yellow-600 w-fit"><WrenchIcon className="w-5 h-5 sm:w-6 sm:h-6" /></div>
+                    <div>
+                      <p className="text-xs sm:text-sm text-gray-500 font-medium">הסתיימה אחריות</p>
+                      <p className="text-xl sm:text-2xl font-bold">{stats.maintenance}</p>
+                    </div>
+                  </button>
+                  
+                  <button onClick={() => setFilterStatus('offline')} className={`text-right bg-white p-4 sm:p-6 rounded-xl shadow-sm border-2 transition-all flex flex-col justify-center gap-2 ${filterStatus === 'offline' ? 'border-red-500 bg-red-50' : 'border-gray-100 hover:border-red-200'}`}>
+                    <div className="bg-red-100 p-2 sm:p-3 rounded-lg text-red-600 w-fit"><AlertTriangleIcon className="w-5 h-5 sm:w-6 sm:h-6" /></div>
+                    <div>
+                      <p className="text-xs sm:text-sm text-gray-500 font-medium">תקלה</p>
+                      <p className="text-xl sm:text-2xl font-bold text-red-600">{stats.offline}</p>
+                    </div>
+                  </button>
+                </div>
+
+                <div className="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col lg:flex-row gap-3 sm:gap-4 justify-between items-start lg:items-center mb-6">
+                  <div className="relative w-full lg:w-96 flex-grow">
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                      <SearchIcon className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input type="text" placeholder="חיפוש לפי שם, כתובת או עיר..." className="block w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                  </div>
+                  
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4 w-full lg:w-auto">
+                    <div className="flex items-center gap-2 flex-1 sm:flex-none min-w-[140px]">
+                      <span className="text-sm text-gray-600 whitespace-nowrap">עיר:</span>
+                      <select className="border border-gray-300 rounded-lg py-2 px-2 sm:px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white w-full" value={filterCity} onChange={(e) => setFilterCity(e.target.value)}>
+                        <option value="all">כל הערים</option>
+                        {uniqueCities.map(city => (<option key={city} value={city}>{city}</option>))}
+                      </select>
+                    </div>
+
+                    <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 w-full sm:w-auto lg:mr-4 mt-2 sm:mt-0 justify-center">
+                      <button onClick={() => setViewMode('list')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === 'list' ? 'bg-white text-blue-700 shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}>
+                        <ListIcon className="w-4 h-4" /> רשימה
+                      </button>
+                      <button onClick={() => setViewMode('map')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === 'map' ? 'bg-white text-blue-700 shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}>
+                        <MapLayoutIcon className="w-4 h-4" /> מפה
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {viewMode === 'list' ? (
+                  <div className="space-y-3 sm:space-y-4">
+                    {filteredCabinets.length > 0 ? (
+                      filteredCabinets.map((cabinet) => {
+                        if (!cabinet) return null;
+                        const absoluteIndex = cabinets.findIndex(c => c && c.id === cabinet.id);
+
+                        return (
+                          <div key={cabinet.id} className="bg-white shadow-sm rounded-xl border border-gray-200 p-3 sm:p-4 flex items-center gap-3 sm:gap-4 hover:border-blue-300 transition-colors">
+                            <div className="flex flex-col items-center justify-center gap-1 bg-gray-50 rounded-lg p-1 border border-gray-100 flex-shrink-0">
+                              <button onClick={() => moveCabinetById(cabinet.id, 'up')} disabled={isFilterActive || absoluteIndex === 0} className={`p-1 rounded transition-colors ${isFilterActive || absoluteIndex === 0 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-100'}`}>
+                                <ChevronUpIcon className="w-5 h-5 sm:w-6 sm:h-6" />
+                              </button>
+                              <button onClick={() => moveCabinetById(cabinet.id, 'down')} disabled={isFilterActive || absoluteIndex === cabinets.length - 1} className={`p-1 rounded transition-colors ${isFilterActive || absoluteIndex === cabinets.length - 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-100'}`}>
+                                <ChevronDownIcon className="w-5 h-5 sm:w-6 sm:h-6" />
+                              </button>
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-3 mb-1.5">
+                                <h3 className="font-bold text-gray-900 text-base sm:text-lg truncate flex items-center gap-2">
+                                  {cabinet.imageUrl ? (
+                                    <div className="relative group cursor-pointer" onClick={() => setFullScreenImage(cabinet.imageUrl)}>
+                                      <img src={cabinet.imageUrl} alt="" className="w-6 h-6 sm:w-8 sm:h-8 rounded-full object-cover border border-gray-200 shadow-sm transition-transform group-hover:scale-110" />
+                                      <div className="absolute inset-0 bg-black bg-opacity-20 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                         <ZoomInIcon className="w-4 h-4 text-white" />
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <ServerIcon className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+                                  )}
+                                  {cabinet.name || ''}
+                                </h3>
+                                <div className="flex-shrink-0">
+                                  <StatusBadge cabinet={cabinet} />
+                                </div>
+                              </div>
+                              
+                              <div className="text-sm text-gray-600 mb-2.5 flex items-start gap-1">
+                                <MapPinIcon className="w-4 h-4 mt-0.5 text-gray-400 flex-shrink-0" />
+                                <span className="truncate">{cabinet.city || ''}, {cabinet.address || ''}</span>
+                              </div>
+
+                              <div className="flex flex-wrap gap-2 sm:gap-4 text-xs font-medium text-gray-600">
+                                <span className="flex items-center gap-1.5 bg-gray-50 border border-gray-100 px-2 py-1 rounded-md">
+                                  <ActivityIcon className="w-3.5 h-3.5 text-gray-400" />
+                                  טיפול אחרון: {cabinet.lastServiceDate || 'אין'}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col gap-2 flex-shrink-0">
+                              <button onClick={() => handleOpenCabinet(cabinet)} className="bg-blue-600 hover:bg-blue-700 text-white p-2.5 sm:px-4 sm:py-2.5 rounded-lg flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 transition-colors shadow-sm">
+                                <WrenchIcon className="w-5 h-5 sm:w-5 sm:h-5" />
+                                <span className="text-xs sm:text-sm font-bold">ניהול ארון</span>
+                              </button>
+
+                              {cabinet.wazeLink && (
+                                <a href={cabinet.wazeLink} target="_blank" rel="noopener noreferrer" className="bg-white hover:bg-gray-50 text-gray-700 p-1.5 sm:px-3 sm:py-1.5 rounded-lg flex items-center justify-center gap-1 transition-colors border border-gray-200 shadow-sm">
+                                  <NavigationIcon className="w-4 h-4 text-blue-500" />
+                                  <span className="text-[10px] sm:text-xs font-bold">ניווט</span>
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="bg-white rounded-xl border-2 border-dashed border-gray-200 p-10 text-center text-gray-500 flex flex-col items-center justify-center">
+                        <SearchIcon className="w-10 h-10 text-gray-300 mb-2"/>
+                        <p className="font-medium">לא נמצאו ארונות התואמים לחיפוש.</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-white shadow-sm rounded-xl border border-gray-100 overflow-hidden p-2">
+                    <MapView cabinets={filteredCabinets} onOpenCabinet={handleOpenCabinet} />
+                  </div>
+                )}
+              </main>
+
+              {/* --- פופ-אפ להוספת ארון חדש --- */}
+              {isAddingNew && (
+                <div className="fixed inset-0 z-[60] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                  <div className="flex items-end justify-center min-h-screen pt-4 px-2 sm:px-4 pb-10 text-center sm:block sm:p-0">
+                    <div className="fixed inset-0 bg-gray-900 bg-opacity-60 transition-opacity backdrop-blur-sm" aria-hidden="true" onClick={() => setIsAddingNew(false)}></div>
+                    <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                    
+                    <div className="inline-block align-bottom bg-white rounded-2xl text-right overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle max-w-2xl w-full">
+                      <div className="bg-green-600 px-4 sm:px-6 py-4 flex justify-between items-center sticky top-0 z-10">
+                        <h3 className="text-lg sm:text-xl font-black text-white flex items-center gap-2">
+                           <PlusIcon className="w-6 h-6" /> הוספת ארון חדש
+                        </h3>
+                        <button onClick={() => setIsAddingNew(false)} className="text-green-100 hover:text-white bg-green-700 hover:bg-green-800 rounded-full p-2 transition-colors">
+                          <CloseIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+                        </button>
+                      </div>
+
+                      <div className="px-4 sm:px-6 py-6 bg-white max-h-[70vh] overflow-y-auto custom-scrollbar">
+                        <div className="space-y-5">
+                          
+                          <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                            <div className="mb-4">
+                              <label className="block text-sm font-bold text-gray-700 mb-1.5">שם הארון <span className="text-red-500">*</span></label>
+                              <div className="relative">
+                                <input type="text" className="w-full border border-gray-300 rounded-lg py-2.5 pr-3 pl-8 text-base focus:ring-2 focus:ring-green-500 bg-white shadow-sm" value={newCabinetForm.name} onChange={(e) => setNewCabinetForm({...newCabinetForm, name: e.target.value})} placeholder="למשל: ארון חניון מרכזי" />
+                                {newCabinetForm.name && (
+                                  <button onClick={() => setNewCabinetForm({...newCabinetForm, name: ''})} className="absolute left-2 top-3 text-gray-400 hover:text-red-500 transition-colors" title="נקה">
+                                    <CloseIcon className="w-5 h-5" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1.5">עיר <span className="text-red-500">*</span></label>
+                                <div className="relative">
+                                  <input type="text" className="w-full border border-gray-300 rounded-lg py-2.5 pr-3 pl-8 text-base focus:ring-2 focus:ring-green-500 bg-white shadow-sm" value={newCabinetForm.city} onChange={(e) => setNewCabinetForm({...newCabinetForm, city: e.target.value})} placeholder="למשל: תל אביב" />
+                                  {newCabinetForm.city && (
+                                    <button onClick={() => setNewCabinetForm({...newCabinetForm, city: ''})} className="absolute left-2 top-3 text-gray-400 hover:text-red-500 transition-colors" title="נקה">
+                                      <CloseIcon className="w-5 h-5" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1.5">כתובת / רחוב</label>
+                                <div className="relative">
+                                  <input type="text" className="w-full border border-gray-300 rounded-lg py-2.5 pr-3 pl-8 text-base focus:ring-2 focus:ring-green-500 bg-white shadow-sm" value={newCabinetForm.address} onChange={(e) => setNewCabinetForm({...newCabinetForm, address: e.target.value})} placeholder="למשל: דיזנגוף 50" />
+                                  {newCabinetForm.address && (
+                                    <button onClick={() => setNewCabinetForm({...newCabinetForm, address: ''})} className="absolute left-2 top-3 text-gray-400 hover:text-red-500 transition-colors" title="נקה">
+                                      <CloseIcon className="w-5 h-5" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                            <label className="block text-sm font-bold text-gray-700 mb-2">תמונת הארון (העלאה או צילום)</label>
+                            {newCabinetForm.imageUrl ? (
+                              <div className="relative inline-block cursor-pointer" onClick={() => setFullScreenImage(newCabinetForm.imageUrl)}>
+                                <img src={newCabinetForm.imageUrl} className="h-32 w-auto rounded-lg border border-gray-300 shadow-sm object-cover hover:opacity-90 transition-opacity" alt="תצוגה מקדימה" />
+                                <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 rounded px-2 py-1 text-white text-[10px] pointer-events-none">לחץ להגדלה</div>
+                                <button onClick={(e) => { e.stopPropagation(); setNewCabinetForm({...newCabinetForm, imageUrl: ''}); }} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-2 shadow-md hover:bg-red-600 transition-colors">
+                                  <CloseIcon className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div>
+                                <input type="file" accept="image/*" id="new-image-upload" className="hidden" onChange={(e) => handleImageUpload(e, true)} />
+                                <label htmlFor="new-image-upload" className="cursor-pointer bg-white text-green-700 hover:bg-green-50 px-4 py-3 rounded-lg text-sm font-bold border border-green-300 transition-colors flex items-center justify-center gap-2 w-full shadow-sm">
+                                  {isUploadingImg ? <LoaderIcon className="w-5 h-5 animate-spin" /> : <UploadIcon className="w-5 h-5" />}
+                                  {isUploadingImg ? 'מעבד תמונה...' : 'בחר תמונה או פתח מצלמה 📸'}
+                                </label>
+                                <div className="mt-3">
+                                  <input type="text" className="w-full border border-gray-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-green-500 ltr-input bg-white text-left" value={newCabinetForm.imageUrl} onChange={(e) => setNewCabinetForm({...newCabinetForm, imageUrl: e.target.value})} placeholder="או הדבק קישור ישיר לתמונה (URL)" dir="ltr" />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                            <label className="block text-sm font-bold text-gray-700 mb-2">מיקום וניווט (Waze)</label>
+                            <div className="flex flex-col gap-2">
+                              <button onClick={() => handleGetLocation(true)} className="bg-white text-green-700 hover:bg-green-50 px-3 py-3 rounded-lg text-sm font-bold border border-green-300 transition-colors flex items-center justify-center gap-2 w-full shadow-sm">
+                                <MapPinIcon className="w-5 h-5" /> דגום מיקום נוכחי עכשיו (GPS) 📍
+                              </button>
+                              <input type="text" className="w-full border border-gray-300 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-green-500 ltr-input bg-white text-left" value={newCabinetForm.wazeLink} onChange={(e) => setNewCabinetForm({...newCabinetForm, wazeLink: e.target.value})} placeholder="או הדבק כאן קישור ווייז ידנית..." dir="ltr" />
+                              {gpsStatus && <p className="text-xs text-green-600 font-medium mt-1">{gpsStatus}</p>}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-bold text-gray-700 mb-1.5">תאריך התקנה</label>
+                              <input type="date" className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-green-500 bg-white" value={newCabinetForm.installationDate} onChange={(e) => handleInstallationDateChange(e, true)} />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-bold text-gray-700 mb-1.5">סיום אחריות</label>
+                              <input type="date" className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-green-500 bg-white" value={newCabinetForm.warrantyEndDate} onChange={(e) => setNewCabinetForm({...newCabinetForm, warrantyEndDate: e.target.value})} />
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1.5">תיאור ומיקום מדויק</label>
+                            <textarea rows="3" className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-green-500 bg-white resize-none" value={newCabinetForm.description} onChange={(e) => setNewCabinetForm({...newCabinetForm, description: e.target.value})} placeholder="לדוגמה: ארון חיצוני ליד עמוד התאורה..." />
+                          </div>
+
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gray-100 px-4 py-3 sm:px-6 sm:py-4 border-t border-gray-200 flex justify-between sticky bottom-0 z-10 rounded-b-2xl">
+                        <button type="button" className="text-gray-600 font-bold px-4 py-2 hover:bg-gray-200 rounded-lg" onClick={() => setIsAddingNew(false)}>ביטול</button>
+                        <button type="button" className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-8 rounded-lg shadow-md transition-colors" onClick={handleCreateCabinet}>
+                          שמור ארון חדש
+                        </button>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* --- פופ-אפ ניהול ועריכת ארון קיים --- */}
+              {activeCabinet && (
+                <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                  <div className="flex items-end justify-center min-h-screen pt-4 px-2 sm:px-4 pb-10 text-center sm:block sm:p-0">
+                    <div className="fixed inset-0 bg-gray-900 bg-opacity-60 transition-opacity backdrop-blur-sm" aria-hidden="true" onClick={() => setSelectedCabinetId(null)}></div>
+                    <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                    
+                    <div className="inline-block align-bottom bg-white rounded-2xl text-right overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle max-w-3xl w-full">
+                      
+                      <div className="bg-gray-50 px-4 sm:px-6 py-4 flex justify-between items-center border-b border-gray-200 sticky top-0 z-10">
+                        <div className="flex items-center gap-3">
+                          {activeCabinet?.imageUrl ? (
+                            <div className="relative group cursor-pointer" onClick={() => setFullScreenImage(activeCabinet.imageUrl)}>
+                               <img src={activeCabinet.imageUrl} alt={activeCabinet?.name || ''} className="h-10 w-10 sm:h-12 sm:w-12 rounded-full object-cover shadow-sm border border-gray-200 transition-transform group-hover:scale-105" />
+                               <div className="absolute inset-0 bg-black bg-opacity-30 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <ZoomInIcon className="w-5 h-5 text-white" />
+                               </div>
+                            </div>
+                          ) : (
+                            <div className="bg-blue-100 p-2 sm:p-3 rounded-full text-blue-600">
+                               <ServerIcon className="h-6 w-6" />
+                            </div>
+                          )}
+                          <div>
+                            <h3 className="text-lg sm:text-xl font-black text-gray-900 leading-tight" id="modal-title">
+                              {activeCabinet?.name || ''}
+                            </h3>
+                            <span className="text-xs sm:text-sm font-medium text-gray-500 flex items-center gap-1 mt-0.5">
+                               <MapPinIcon className="w-3 h-3" /> {activeCabinet?.city || ''}, {activeCabinet?.address || ''}
+                            </span>
+                          </div>
+                        </div>
+                        <button onClick={() => setSelectedCabinetId(null)} className="text-gray-400 hover:text-gray-700 focus:outline-none bg-white border border-gray-200 hover:bg-gray-100 rounded-full p-2 transition-colors shadow-sm">
+                          <CloseIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+                        </button>
+                      </div>
+
+                      <div id="modal-scroll-area" className="px-4 sm:px-6 py-6 bg-white max-h-[70vh] overflow-y-auto custom-scrollbar relative scroll-smooth">
+                        
+                        <div className="mb-8">
+                          <h4 className="text-base sm:text-lg font-bold text-gray-800 border-b-2 border-blue-100 pb-2 mb-4 flex items-center gap-2">
+                            <InfoIcon className="w-5 h-5 text-blue-600"/> מיקום, הגדרות ושליטה
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                            
+                            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 shadow-sm h-fit order-1 md:order-2">
+                              <h5 className="text-sm font-bold text-blue-900 uppercase tracking-wider mb-3">סטטוס ושליטה מרחוק</h5>
+                              <div className="space-y-4">
+                                <div className="flex flex-col gap-3 bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-700 font-bold">מצב נוכחי:</span>
+                                    <StatusBadge cabinet={activeCabinet} />
+                                  </div>
+                                </div>
+                                
+                                <div>
+                                  <label className="block text-xs font-bold text-gray-600 mb-1.5">עדכון סטטוס ידני</label>
+                                  <select
+                                    className="block w-full pl-3 pr-10 py-3 text-base sm:text-sm border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 rounded-lg border bg-white shadow-sm font-medium"
+                                    value={activeCabinet?.status === 'offline' ? 'offline' : 'active'}
+                                    onChange={(e) => handleUpdateStatus(activeCabinet.id, e.target.value)}
+                                  >
+                                    <option value="active">🟢 פעיל ותקין</option>
+                                    <option value="offline">🔴 תקלה</option>
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="order-2 md:order-1">
+                              <div className="flex justify-between items-center mb-3 px-1">
+                                <h5 className="text-sm font-bold text-gray-600 uppercase tracking-wider">מפרט טכני וכתובות</h5>
+                              </div>
+                              
+                              <div className="space-y-4 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                                {isEditingInfo ? (
+                                  <div className="space-y-4">
+                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-3">
+                                      <div className="mb-3">
+                                        <label className="block text-xs font-bold text-gray-600 mb-1">שם הארון</label>
+                                        <div className="relative">
+                                          <input type="text" className="w-full border border-gray-300 rounded-lg py-2 pr-3 pl-8 text-sm focus:ring-2 focus:ring-blue-500 bg-white" value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})} />
+                                          {editForm.name && (
+                                            <button onClick={() => setEditForm({...editForm, name: ''})} className="absolute left-2 top-2.5 text-gray-400 hover:text-red-500 transition-colors" title="נקה">
+                                              <CloseIcon className="w-4 h-4" />
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                          <label className="block text-xs font-bold text-gray-600 mb-1">עיר</label>
+                                          <div className="relative">
+                                            <input type="text" className="w-full border border-gray-300 rounded-lg py-2 pr-3 pl-8 text-sm focus:ring-2 focus:ring-blue-500 bg-white" value={editForm.city} onChange={(e) => setEditForm({...editForm, city: e.target.value})} />
+                                            {editForm.city && (
+                                              <button onClick={() => setEditForm({...editForm, city: ''})} className="absolute left-2 top-2.5 text-gray-400 hover:text-red-500 transition-colors" title="נקה">
+                                                <CloseIcon className="w-4 h-4" />
+                                              </button>
+                                            )}
+                                          </div>
+                                        </div>
+                                        <div>
+                                          <label className="block text-xs font-bold text-gray-600 mb-1">כתובת / רחוב</label>
+                                          <div className="relative">
+                                            <input type="text" className="w-full border border-gray-300 rounded-lg py-2 pr-3 pl-8 text-sm focus:ring-2 focus:ring-blue-500 bg-white" value={editForm.address} onChange={(e) => setEditForm({...editForm, address: e.target.value})} />
+                                            {editForm.address && (
+                                              <button onClick={() => setEditForm({...editForm, address: ''})} className="absolute left-2 top-2.5 text-gray-400 hover:text-red-500 transition-colors" title="נקה">
+                                                <CloseIcon className="w-4 h-4" />
+                                              </button>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                                      <label className="block text-xs font-bold text-gray-600 mb-2">תמונת הארון (העלאה מהמכשיר)</label>
+                                      {editForm.imageUrl ? (
+                                        <div className="relative inline-block cursor-pointer" onClick={() => setFullScreenImage(editForm.imageUrl)}>
+                                          <img src={editForm.imageUrl} className="h-24 w-auto rounded-lg border border-gray-300 shadow-sm object-cover hover:opacity-90 transition-opacity" alt="תצוגה מקדימה" />
+                                          <div className="absolute bottom-1 left-1 bg-black bg-opacity-50 rounded px-1.5 py-0.5 text-white text-[9px] pointer-events-none">לחץ להגדלה</div>
+                                          <button onClick={(e) => { e.stopPropagation(); setEditForm({...editForm, imageUrl: ''}); }} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 shadow-md hover:bg-red-600 transition-colors" title="הסר תמונה">
+                                            <CloseIcon className="w-3 h-3" />
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <div>
+                                          <input type="file" accept="image/*" id="edit-image-upload" className="hidden" onChange={(e) => handleImageUpload(e, false)} />
+                                          <label htmlFor="edit-image-upload" className="cursor-pointer bg-white text-blue-700 hover:bg-blue-50 px-4 py-2.5 rounded-lg text-sm font-bold border border-blue-300 transition-colors flex items-center justify-center gap-2 w-full shadow-sm">
+                                            {isUploadingImg ? <LoaderIcon className="w-5 h-5 animate-spin" /> : <UploadIcon className="w-5 h-5" />}
+                                            {isUploadingImg ? 'מעבד תמונה...' : 'בחר תמונה או פתח מצלמה 📸'}
+                                          </label>
+                                          <div className="mt-3">
+                                            <input type="text" className="w-full border border-gray-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 ltr-input bg-white text-left" value={editForm.imageUrl} onChange={(e) => setEditForm({...editForm, imageUrl: e.target.value})} placeholder="או הדבק קישור ישיר לתמונה (URL)" dir="ltr" />
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 mt-3">
+                                      <label className="block text-xs font-bold text-gray-600 mb-2">מיקום וניווט (Waze)</label>
+                                      <div className="flex flex-col gap-2">
+                                        <button onClick={() => handleGetLocation(false)} className="bg-white text-green-700 hover:bg-green-50 px-3 py-2.5 rounded-lg text-sm font-bold border border-green-300 transition-colors flex items-center justify-center gap-2 w-full shadow-sm">
+                                          <MapPinIcon className="w-5 h-5" /> דגום מיקום נוכחי עכשיו (GPS) 📍
+                                        </button>
+                                        <div className="relative">
+                                          <input type="text" className="w-full border border-gray-300 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ltr-input bg-white text-left" value={editForm.wazeLink} onChange={(e) => setEditForm({...editForm, wazeLink: e.target.value})} placeholder="...או הדבק כאן קישור ווייז ידנית" dir="ltr" />
+                                        </div>
+                                        {gpsStatus && <p className="text-xs text-green-600 font-medium mt-1">{gpsStatus}</p>}
+                                      </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                      <div>
+                                        <label className="block text-xs font-bold text-gray-600 mb-1">תאריך התקנה</label>
+                                        <input type="date" className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white" value={editForm.installationDate} onChange={(e) => handleInstallationDateChange(e, false)} />
+                                      </div>
+                                      <div>
+                                        <label className="block text-xs font-bold text-gray-600 mb-1">סיום אחריות</label>
+                                        <input type="date" className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white" value={editForm.warrantyEndDate} onChange={(e) => setEditForm({...editForm, warrantyEndDate: e.target.value})} />
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-bold text-gray-600 mb-1">תיאור ומיקום מדויק</label>
+                                      <textarea rows="3" className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white resize-none" value={editForm.description} onChange={(e) => setEditForm({...editForm, description: e.target.value})} placeholder="לדוגמה: קומה -1 ליד המעליות..." />
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-4">
+                                    <div className="flex items-start gap-3 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                      <InfoIcon className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                                      <div>
+                                        <span className="block text-xs font-bold text-gray-500 mb-0.5">תיאור ומיקום באזור</span>
+                                        <span className="text-sm font-medium text-gray-800 leading-relaxed">{activeCabinet?.description || 'לא הוזן תיאור'}</span>
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 gap-3">
+                                      <div className="flex items-start gap-2 bg-white p-2 border border-gray-100 rounded-lg">
+                                        <CalendarIcon className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                                        <div>
+                                          <span className="block text-[10px] font-bold text-gray-500 uppercase">תאריך התקנה</span>
+                                          <span className="text-sm font-bold text-gray-900">{activeCabinet?.installationDate || ''}</span>
+                                        </div>
+                                      </div>
+
+                                      <div className={`flex items-start gap-2 p-2 border rounded-lg ${activeCabinet?.warrantyEndDate && new Date() > new Date(activeCabinet.warrantyEndDate) ? 'bg-red-50 border-red-100' : 'bg-white border-gray-100'}`}>
+                                        <ShieldAlertIcon className={`h-4 w-4 mt-0.5 flex-shrink-0 ${activeCabinet?.warrantyEndDate && new Date() > new Date(activeCabinet.warrantyEndDate) ? 'text-red-500' : 'text-gray-400'}`} />
+                                        <div>
+                                          <span className="block text-[10px] font-bold text-gray-500 uppercase">תוקף אחריות</span>
+                                          <span className={`text-sm font-bold ${activeCabinet?.warrantyEndDate && new Date() > new Date(activeCabinet.warrantyEndDate) ? 'text-red-700' : 'text-gray-900'}`}>
+                                            {activeCabinet?.warrantyEndDate || 'לא מוגדר'}
+                                            {activeCabinet?.warrantyEndDate && new Date() > new Date(activeCabinet.warrantyEndDate) && <span className="block text-[10px] text-red-500">(פג תוקף)</span>}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                          </div>
+                        </div>
+
+                        <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent my-8 opacity-50"></div>
+
+                        <div>
+                          <div className="flex items-center justify-between mb-5 px-1">
+                            <h4 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">
+                              <ClipboardListIcon className="w-5 h-5 text-purple-600"/> דיווחי טכנאי והיסטוריה
+                            </h4>
+                            <span className="text-xs sm:text-sm bg-purple-100 text-purple-800 py-1 px-3 rounded-full font-bold border border-purple-200 shadow-sm">{activeCabinet?.notes?.length || 0} רשומות</span>
+                          </div>
+
+                          <div className="mb-6 bg-gradient-to-br from-purple-50 to-white p-4 sm:p-5 rounded-xl border border-purple-200 shadow-md">
+                            <label className="block text-sm sm:text-base font-black text-purple-900 mb-4 flex items-center gap-2">
+                              <ActivityIcon className="w-5 h-5" /> הוסף דיווח או תקלה חדשה
+                            </label>
+                            <div className="flex flex-col gap-4">
+                              <div className="w-full sm:w-1/3">
+                                <label className="block text-xs font-bold text-purple-800 mb-1.5">תאריך ביצוע</label>
+                                <input
+                                  type="date"
+                                  className="border border-purple-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm py-2.5 px-3 bg-white w-full text-purple-900 font-bold"
+                                  value={newNoteDate}
+                                  onChange={(e) => setNewNoteDate(e.target.value)}
+                                />
+                              </div>
+                              <div className="flex flex-col sm:flex-row gap-3">
+                                <div className="relative flex-1">
+                                  <textarea
+                                    rows="3"
+                                    className="block w-full border border-purple-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm py-3 pr-3 resize-none bg-white font-medium"
+                                    placeholder="תאר בפירוט את מה שבוצע בארון, איזה ציוד הוחלף או מהות התקלה..."
+                                    value={newNote}
+                                    onChange={(e) => setNewNote(e.target.value)}
+                                  ></textarea>
+                                </div>
+                                <button onClick={handleAddNote} className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-sm sm:text-base font-black rounded-lg shadow-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 h-auto whitespace-nowrap self-end sm:self-stretch transition-transform active:scale-95 w-full sm:w-auto">
+                                  <SaveIcon className="h-5 w-5 ml-2" /> שמור דיווח
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            {activeCabinet?.notes && activeCabinet.notes.length > 0 ? (
+                              activeCabinet.notes.map((note, index) => (
+                                <div key={index} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex gap-3 sm:gap-4 items-start group relative hover:border-purple-300 transition-colors">
+                                  <div className="bg-purple-50 border border-purple-100 rounded-full p-2.5 sm:p-3 flex-shrink-0 mt-0.5">
+                                    <WrenchIcon className="h-4 w-4 sm:h-5 sm:w-5 text-purple-700" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2 border-b border-gray-50 pb-2">
+                                      <span className="text-sm font-black text-gray-900">{note.date}</span>
+                                      <span className="text-[11px] sm:text-xs bg-gray-100 text-gray-700 border border-gray-200 px-2 py-1 rounded-md flex items-center gap-1 font-bold">
+                                        <UserIcon className="w-3 h-3" /> פורסם ע"י: {note.author || 'מערכת'}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm sm:text-base text-gray-800 leading-relaxed whitespace-pre-wrap break-words font-medium">{note.text}</p>
+                                  </div>
+                                  <button onClick={() => handleDeleteNote(index)} className="text-gray-400 hover:text-red-600 sm:opacity-0 group-hover:opacity-100 transition-opacity absolute left-2 top-2 p-1.5 bg-white hover:bg-red-50 rounded-lg border border-transparent hover:border-red-200 shadow-sm sm:shadow-none" title="מחק רישום">
+                                    <TrashIcon className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-center py-10 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center">
+                                <ActivityIcon className="w-10 h-10 text-gray-300 mb-2" />
+                                <p className="text-sm font-bold text-gray-500">לא תועדו טיפולים לארון זה.</p>
+                                <p className="text-xs text-gray-400 mt-1">השתמש בטופס למעלה כדי להוסיף את הטיפול הראשון.</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                      </div>
+                      
+                      {/* --- כפתורי תחתית - ניהול, מחיקה ועריכה --- */}
+                      <div className="bg-gray-100 px-4 py-3 sm:px-6 sm:py-4 border-t border-gray-200 flex flex-wrap justify-between items-center gap-3 sticky bottom-0 z-10 rounded-b-2xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                        {isEditingInfo ? (
+                            <>
+                                <button type="button" className="text-gray-600 font-bold px-4 py-2 hover:bg-gray-200 rounded-lg order-2 sm:order-1 transition-colors" onClick={() => setIsEditingInfo(false)}>ביטול עריכה</button>
+                                <button type="button" className="bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-8 rounded-lg shadow-md transition-colors order-1 sm:order-2 flex items-center justify-center gap-2 flex-1 sm:flex-none" onClick={handleSaveInfo}>
+                                    <SaveIcon className="w-5 h-5" /> שמור שינויים
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <div className="flex gap-2 w-full sm:w-auto order-2 sm:order-1">
+                                    <button type="button" onClick={() => setCabinetToDelete(activeCabinet.id)} className="flex-1 sm:flex-none bg-red-100 text-red-700 hover:bg-red-200 font-bold py-2.5 px-4 rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+                                        <TrashIcon className="w-5 h-5" /> מחק ארון
+                                    </button>
+                                    <button type="button" onClick={startEditing} className="flex-1 sm:flex-none bg-blue-100 text-blue-700 hover:bg-blue-200 font-bold py-2.5 px-4 rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+                                        <EditIcon className="w-5 h-5" /> ערוך ארון
+                                    </button>
+                                </div>
+                                <button type="button" className="bg-white w-full sm:w-auto py-3 sm:py-2.5 px-8 border border-gray-300 rounded-lg shadow-sm text-sm font-black text-gray-800 hover:bg-gray-50 transition-colors order-1 sm:order-2" onClick={() => setSelectedCabinetId(null)}>
+                                    סגור חלון
+                                </button>
+                            </>
+                        )}
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
