@@ -9,6 +9,11 @@
     <meta name="theme-color" content="#b91c1c">
     <title>ענף תקשורת - מערכת ניהול ארונות</title>
     
+    <!-- הגדרות לוגו לאפליקציה במסך הבית -->
+    <link rel="icon" type="image/png" href="./לוגו.png">
+    <link rel="apple-touch-icon" href="./לוגו.png">
+    <link rel="shortcut icon" href="./לוגו.png">
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -78,7 +83,7 @@
         const ClipboardListIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="M9 12h6" /><path d="M9 16h6" /><path d="M9 8h6" /></svg>);
         const LogOutIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></svg>);
         const UserIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>);
-        const UploadIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2-2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" /></svg>);
+        const UploadIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" /></svg>);
         const PlusIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>);
         const ZoomInIcon = ({ className }) => (<svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /><line x1="11" y1="8" x2="11" y2="14" /><line x1="8" y1="11" x2="14" y2="11" /></svg>);
 
@@ -235,7 +240,7 @@
           const [fb, setFb] = useState(null);
           const [fbUser, setFbUser] = useState(null);
 
-          // התחברות ל-Firebase בספריות יציבות
+          // התחברות ל-Firebase בספריות יציבות עם תפיסת שגיאות הרשאה
           useEffect(() => {
              let isMounted = true;
 
@@ -277,7 +282,7 @@
              }
           }, []);
 
-          // סנכרון עם ענן הנתונים
+          // סנכרון עם ענן הנתונים ותפיסת שגיאות הרשאה במסד הנתונים
           useEffect(() => {
              if (isLocalMode || authError || !fb || !fbUser) return;
              
@@ -298,7 +303,11 @@
                  }
              }, (error) => {
                  console.error("Snapshot error:", error);
-                 setIsLocalMode(true); 
+                 if (error.code === 'permission-denied') {
+                     setAuthError(true); // מציג את מסך השגיאה כדי שיעדכן הרשאות
+                 } else {
+                     setIsLocalMode(true); 
+                 }
              });
 
              return () => unsubscribe();
@@ -333,19 +342,19 @@
           const [isUploadingImg, setIsUploadingImg] = useState(false);
           const [fullScreenImage, setFullScreenImage] = useState(null);
           
-          const [toastMsg, setToastMsg] = useState('');
+          const [toastMsg, setToastMsg] = useState(null);
           const [cabinetToDelete, setCabinetToDelete] = useState(null);
 
-          const showToast = (msg) => {
-              setToastMsg(msg);
-              setTimeout(() => setToastMsg(''), 3500);
+          const showToast = (text, type = 'success') => {
+              setToastMsg({ text, type });
+              setTimeout(() => setToastMsg(null), 4000);
           };
 
           useEffect(() => {
               if (selectedCabinetId && cabinets.length > 0) {
                   if (!cabinets.find(c => c.id === selectedCabinetId)) {
                       setSelectedCabinetId(null);
-                      showToast("הארון נמחק על ידי משתמש אחר ברשת.");
+                      showToast("הארון נמחק על ידי משתמש אחר ברשת.", "error");
                   }
               }
           }, [cabinets, selectedCabinetId]);
@@ -477,13 +486,17 @@
             
             if (isLocalMode) {
                 setCabinets(prev => [newCab, ...prev]);
-                showToast("הארון הוסף בהצלחה למכשיר שלך!");
+                showToast("הארון הוסף בהצלחה למכשיר שלך (לא מסונכרן לענן).");
                 return;
             }
 
             if (fb && fbUser) {
-                await getCabinetRef(newCab.id).set(newCab);
-                showToast("הארון הוסף בהצלחה לענן!");
+                try {
+                    await getCabinetRef(newCab.id).set(newCab);
+                    showToast("הארון הוסף בהצלחה לענן!");
+                } catch(e) {
+                    showToast("שגיאה בשמירה: " + e.message, "error");
+                }
             }
           };
 
@@ -517,17 +530,7 @@
           };
 
           const uniqueCities = useMemo(() => {
-            return [...new Set(cabinets.filter(Boolean).map(c => c.city))].sort();
-          }, [cabinets]);
-
-          const stats = useMemo(() => {
-            const validCabinets = cabinets.filter(Boolean);
-            return {
-              total: validCabinets.length,
-              active: validCabinets.filter(c => getEffectiveStatus(c) === 'active').length,
-              maintenance: validCabinets.filter(c => getEffectiveStatus(c) === 'maintenance').length,
-              offline: validCabinets.filter(c => getEffectiveStatus(c) === 'offline').length,
-            };
+            return [...new Set(cabinets.filter(Boolean).map(c => (c.city || '').trim()))].filter(Boolean).sort();
           }, [cabinets]);
 
           const filteredCabinets = useMemo(() => {
@@ -536,10 +539,20 @@
               const matchesSearch = (cabinet.name || '').includes(searchQuery) || (cabinet.address || '').includes(searchQuery) || (cabinet.city || '').includes(searchQuery);
               const effectiveStatus = getEffectiveStatus(cabinet);
               const matchesStatus = filterStatus === 'all' || effectiveStatus === filterStatus;
-              const matchesCity = filterCity === 'all' || cabinet.city === filterCity;
+              const matchesCity = filterCity === 'all' || (cabinet.city || '').trim() === filterCity;
               return matchesSearch && matchesStatus && matchesCity;
             });
           }, [cabinets, searchQuery, filterStatus, filterCity]);
+
+          const stats = useMemo(() => {
+            const validCabinets = filteredCabinets; 
+            return {
+              total: validCabinets.length,
+              active: validCabinets.filter(c => getEffectiveStatus(c) === 'active').length,
+              maintenance: validCabinets.filter(c => getEffectiveStatus(c) === 'maintenance').length,
+              offline: validCabinets.filter(c => getEffectiveStatus(c) === 'offline').length,
+            };
+          }, [filteredCabinets]);
 
           const handleUpdateStatus = async (id, newStatus) => {
             if (!activeCabinet) return;
@@ -550,13 +563,13 @@
 
             if (isLocalMode) {
                 setCabinets(prev => prev.map(cab => cab.id === id ? { ...cab, status: newStatus, notes: updatedNotes, order: Date.now() } : cab));
-                showToast("הסטטוס התעדכן והארון הוקפץ לראש הרשימה!");
+                showToast("הסטטוס התעדכן מקומית!");
                 return;
             }
 
             if (fb && fbUser) {
                 await getCabinetRef(id).update({ status: newStatus, notes: updatedNotes, order: Date.now() });
-                showToast("הסטטוס התעדכן בענן והארון הוקפץ לראש הרשימה!");
+                showToast("הסטטוס התעדכן בענן!");
             }
           };
 
@@ -572,7 +585,7 @@
 
             if (isLocalMode) {
                 setCabinets(prev => prev.map(cab => cab.id === activeCabinet.id ? { ...cab, notes: updatedNotes, lastServiceDate: newLastServiceDate, order: Date.now() } : cab));
-                showToast("הדיווח נשמר והארון הוקפץ לראש הרשימה!");
+                showToast("הדיווח נשמר מקומית!");
                 return;
             }
 
@@ -643,7 +656,7 @@
 
             if (isLocalMode) {
                 setCabinets(prev => prev.map(cab => cab.id === activeCabinet.id ? { ...cab, ...updates } : cab));
-                showToast("הפרטים נשמרו בהצלחה למכשיר!");
+                showToast("הפרטים נשמרו מקומית!");
                 return;
             }
 
@@ -665,32 +678,34 @@
 
               if (fb && fbUser) {
                   await getCabinetRef(id).delete();
-                  showToast("הארון נמחק בהצלחה לצמיתות משרת הענן!");
+                  showToast("הארון נמחק בהצלחה לצמיתות מהענן!");
               }
           };
 
-          // מסך שגיאת פיירבייס - התחברות אנונימית
+          // --- מסך שגיאת פיירבייס מורחב ---
           if (authError) {
               return (
                   <div dir="rtl" className="min-h-screen bg-gray-50 flex flex-col justify-center items-center p-6 font-sans text-center">
                       <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-red-200">
                           <ShieldAlertIcon className="w-16 h-16 text-red-500 mx-auto mb-4" />
-                          <h2 className="text-2xl font-black text-gray-900 mb-3">כמעט סיימנו! 🔒</h2>
+                          <h2 className="text-2xl font-black text-gray-900 mb-3">חסימת אבטחה בענן! 🔒</h2>
                           <p className="text-sm text-gray-600 mb-6 leading-relaxed">
-                              כדי שהמערכת תוכל להסתנכרן בין כל הטלפונים, צריך לאפשר לחשבונות "אנונימיים" להתחבר למסד הנתונים שלך ב-Firebase.
+                              שרת הנתונים שלך (Firebase) מונע את החיבור מהאפליקציה. יש לוודא שתי הגדרות פשוטות במסוף שלך כדי שנוכל להסתנכרן:
                           </p>
                           <div className="text-right text-sm text-gray-700 bg-gray-50 p-4 rounded-lg border border-gray-100 mb-6">
-                              <p className="font-bold text-gray-900 mb-3">איך מתקנים ב-3 לחיצות?</p>
-                              <ol className="list-decimal list-inside space-y-2.5">
-                                  <li>כנס לאתר Firebase ולחץ על הפרויקט שלך.</li>
-                                  <li>בתפריט השמאלי, לחץ על <b>Authentication</b>.</li>
-                                  <li>לחץ על הכפתור הלבן <b>Get started</b> (אם הוא מופיע).</li>
-                                  <li>עבור ללשונית <b>Sign-in method</b> למעלה.</li>
-                                  <li>ברשימה למטה בחר ב-<b>Anonymous</b> (אנונימי), הדלק את המתג ל-Enable, ולחץ Save.</li>
-                              </ol>
+                              <p className="font-bold text-gray-900 mb-2">1. הפעלת התחברות אנונימית:</p>
+                              <ul className="list-disc list-inside space-y-1 mb-4 text-xs">
+                                  <li>כנס ל-Firebase ולחץ על <b>Authentication</b>.</li>
+                                  <li>בלשונית <b>Sign-in method</b>, ודא שהאפשרות <b>Anonymous</b> פועלת (Enabled).</li>
+                              </ul>
+                              <p className="font-bold text-gray-900 mb-2">2. הרשאות כתיבה (Rules):</p>
+                              <ul className="list-disc list-inside space-y-1 text-xs">
+                                  <li>בתפריט <b>Firestore Database</b> חפש לשונית <b>Rules</b>.</li>
+                                  <li>שנה את המילה <code>false</code> למילה <code>true</code> ולחץ על Publish.</li>
+                              </ul>
                           </div>
                           <button onClick={() => window.location.reload()} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 px-4 rounded-xl transition-colors shadow-md text-lg">
-                              עשיתי את זה, רענן עמוד!
+                              תיקנתי, רענן את העמוד!
                           </button>
                       </div>
                   </div>
@@ -703,7 +718,7 @@
                 <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-gray-200">
                   <div className="flex flex-col items-center justify-center mb-8">
                     <div className="bg-white p-3 rounded-2xl mb-4 shadow-sm border border-gray-100 w-32 h-32 flex items-center justify-center overflow-hidden">
-                      <img src="לוגו.jpeg" alt="לוגו ענף תקשורת" className="w-full h-full object-contain" onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/200x200/dc2626/white?text=LOGO'; }}/>
+                      <img src="./לוגו.png" alt="לוגו ענף תקשורת" className="w-full h-full object-contain" onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/200x200/dc2626/white?text=LOGO'; }}/>
                     </div>
                     <h2 className="text-3xl font-black text-gray-900 tracking-tight text-center">ענף תקשורת</h2>
                     <p className="text-sm text-gray-500 mt-1 font-medium text-center">מערכת מחוברת ענן</p>
@@ -737,10 +752,11 @@
           return (
             <div dir="rtl" className="min-h-screen bg-gray-50 text-gray-900 font-sans pb-10 relative">
               
+              {/* הודעות פופ-אפ */}
               {toastMsg && (
-                  <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[200] bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-2 animate-bounce">
-                      <CheckCircleIcon className="w-5 h-5 text-green-400" />
-                      <span className="font-bold text-sm whitespace-nowrap">{toastMsg}</span>
+                  <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-[200] text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-2 animate-bounce ${toastMsg.type === 'error' ? 'bg-red-600' : 'bg-gray-900'}`}>
+                      {toastMsg.type === 'error' ? <AlertTriangleIcon className="w-5 h-5 text-red-200" /> : <CheckCircleIcon className="w-5 h-5 text-green-400" />}
+                      <span className="font-bold text-sm whitespace-nowrap">{toastMsg.text}</span>
                   </div>
               )}
 
@@ -773,11 +789,18 @@
                 <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
                   <div className="flex items-center gap-2 sm:gap-4">
                     <div className="bg-white p-1 rounded-lg shadow-sm flex items-center justify-center w-10 h-10 sm:w-14 sm:h-14 overflow-hidden">
-                      <img src="לוגו.jpeg" alt="לוגו ענף תקשורת" className="w-full h-full object-contain" onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/100x100/dc2626/white?text=LOGO'; }}/>
+                      <img src="./לוגו.png" alt="לוגו ענף תקשורת" className="w-full h-full object-contain" onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/100x100/dc2626/white?text=LOGO'; }}/>
                     </div>
                     <div className="flex flex-col">
                       <h1 className="text-lg sm:text-2xl font-black tracking-tight flex items-center gap-1 sm:gap-2">
-                        ענף תקשורת <span className="font-normal text-red-200 hidden sm:inline">|</span> <span className="text-sm sm:text-lg font-medium hidden sm:inline text-red-100">מערכת מחוברת ענן</span>
+                        ענף תקשורת <span className="font-normal text-red-200 hidden sm:inline">|</span> 
+                        {isLocalMode ? (
+                            <span className="text-[10px] sm:text-sm bg-red-800 px-2 py-0.5 rounded-full font-bold border border-red-500 shadow-inner flex items-center gap-1 whitespace-nowrap"><XCircleIcon className="w-3 h-3"/> מצב לא מקוון (טלפון בלבד)</span>
+                        ) : (!fbUser ? (
+                            <span className="text-[10px] sm:text-sm bg-yellow-600 px-2 py-0.5 rounded-full font-bold border border-yellow-500 shadow-inner flex items-center gap-1 whitespace-nowrap"><LoaderIcon className="w-3 h-3 animate-spin"/> מתחבר לענן...</span>
+                        ) : (
+                            <span className="text-[10px] sm:text-sm bg-green-700 px-2 py-0.5 rounded-full font-bold border border-green-500 shadow-inner flex items-center gap-1 whitespace-nowrap"><CheckCircleIcon className="w-3 h-3"/> ענן מסונכרן</span>
+                        ))}
                       </h1>
                     </div>
                   </div>
@@ -921,7 +944,7 @@
                               </button>
 
                               {cabinet.wazeLink && (
-                                <a href={cabinet.wazeLink} target="_blank" rel="noopener noreferrer" className="bg-white hover:bg-gray-50 text-gray-700 p-1.5 sm:px-3 sm:py-1.5 rounded-lg flex items-center justify-center gap-1 transition-colors border border-gray-200 shadow-sm">
+                                <a href={cabinet.wazeLink.startsWith('http') ? cabinet.wazeLink : `https://${cabinet.wazeLink}`} target="_blank" rel="noopener noreferrer" className="bg-white hover:bg-gray-50 text-gray-700 p-1.5 sm:px-3 sm:py-1.5 rounded-lg flex items-center justify-center gap-1 transition-colors border border-gray-200 shadow-sm">
                                   <NavigationIcon className="w-4 h-4 text-blue-500" />
                                   <span className="text-[10px] sm:text-xs font-bold">ניווט</span>
                                 </a>
