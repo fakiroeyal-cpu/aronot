@@ -219,24 +219,11 @@
             appId: "1:936688002844:web:61eb6c8fbd6c0ead043cd9"
           };
 
-          // מנגנון תיקון קישורי וויז חכם המונע שגיאות "משהו השתבש"
-          const getValidWazeLink = (link) => {
-            if (!link) return '';
-            let cleanLink = link.trim();
-            // אם המשתמש הדביק טקסט שמכיל בתוכו קישור תקין, נשלוף רק אותו
-            const urlMatch = cleanLink.match(/(https?:\/\/[^\s]+)/);
-            if (urlMatch) return urlMatch[0];
-            if (cleanLink.startsWith('waze://')) return cleanLink;
-            // אם המשתמש הדביק קואורדינטות נקיות
-            if (/^[-0-9.]+\s*,\s*[-0-9.]+$/.test(cleanLink)) {
-                return `https://www.waze.com/ul?ll=${cleanLink.replace(/\s/g, '')}&navigate=yes`;
-            }
-            // אם המשתמש הדביק קישור בלי https
-            if (cleanLink.toLowerCase().includes('waze.com') || cleanLink.toLowerCase().includes('maps.app.goo.gl') || cleanLink.toLowerCase().includes('google.com/maps')) {
-                return `https://${cleanLink}`;
-            }
-            // אם המשתמש כתב סתם כתובת טקסט חופשי (כמו "דיזנגוף 50"), נהפוך את זה לחיפוש בוויז
-            return `https://www.waze.com/ul?q=${encodeURIComponent(cleanLink)}&navigate=yes`;
+          // יצירת קישור וויז חכם מבוסס כתובת ועיר (החלף את המנגנון הישן)
+          const getWazeUrl = (cab) => {
+            const query = `${cab.address || ''} ${cab.city || ''}`.trim();
+            if (!query) return null;
+            return `https://www.waze.com/ul?q=${encodeURIComponent(query)}&navigate=yes`;
           };
 
           const [isLocalMode, setIsLocalMode] = useState(false);
@@ -358,7 +345,6 @@
             name: '', city: '', address: '', description: '', wazeLink: '', imageUrl: '', installationDate: '', warrantyEndDate: ''
           });
           
-          const [gpsStatus, setGpsStatus] = useState('');
           const [isUploadingImg, setIsUploadingImg] = useState(false);
           const [fullScreenImage, setFullScreenImage] = useState(null);
           
@@ -440,33 +426,6 @@
               };
               reader.readAsDataURL(file);
             }, 50); 
-          };
-
-          const handleGetLocation = (isNew = false) => {
-            setGpsStatus('מחפש מיקום (GPS)... ⏳');
-            if (navigator.geolocation) {
-              navigator.geolocation.getCurrentPosition(
-                (position) => {
-                  const lat = position.coords.latitude;
-                  const lng = position.coords.longitude;
-                  const link = `https://www.waze.com/ul?ll=${lat},${lng}&navigate=yes`;
-                  if (isNew) {
-                      setNewCabinetForm(prev => ({...prev, wazeLink: link}));
-                  } else {
-                      setEditForm(prev => ({...prev, wazeLink: link}));
-                  }
-                  setGpsStatus('✅ המיקום הנוכחי שלך נדגם בהצלחה!');
-                  setTimeout(() => setGpsStatus(''), 4000);
-                },
-                (error) => {
-                  setGpsStatus('❌ שגיאה: נא לוודא ששירותי המיקום (GPS) דלוקים במכשיר.');
-                  setTimeout(() => setGpsStatus(''), 4000);
-                },
-                { enableHighAccuracy: true }
-              );
-            } else {
-              setGpsStatus('❌ הדפדפן שלך לא תומך בקריאת מיקום.');
-            }
           };
 
           const handleInstallationDateChange = (e, isNew = false) => {
@@ -634,7 +593,6 @@
             if (!cabinet) return;
             setSelectedCabinetId(cabinet.id);
             setIsEditingInfo(false);
-            setGpsStatus('');
           };
 
           const startEditing = () => {
@@ -963,8 +921,8 @@
                                 <span className="text-xs sm:text-sm font-bold">ניהול ארון</span>
                               </button>
 
-                              {cabinet.wazeLink && (
-                                <a href={getValidWazeLink(cabinet.wazeLink)} target="_blank" rel="noopener noreferrer" className="bg-white hover:bg-gray-50 text-gray-700 p-1.5 sm:px-3 sm:py-1.5 rounded-lg flex items-center justify-center gap-1 transition-colors border border-gray-200 shadow-sm">
+                              {getWazeUrl(cabinet) && (
+                                <a href={getWazeUrl(cabinet)} target="_blank" rel="noopener noreferrer" className="bg-white hover:bg-gray-50 text-gray-700 p-1.5 sm:px-3 sm:py-1.5 rounded-lg flex items-center justify-center gap-1 transition-colors border border-gray-200 shadow-sm">
                                   <NavigationIcon className="w-4 h-4 text-blue-500" />
                                   <span className="text-[10px] sm:text-xs font-bold">ניווט</span>
                                 </a>
@@ -1067,17 +1025,6 @@
                                 </div>
                               </div>
                             )}
-                          </div>
-
-                          <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                            <label className="block text-sm font-bold text-gray-700 mb-2">מיקום וניווט (Waze)</label>
-                            <div className="flex flex-col gap-2">
-                              <button onClick={() => handleGetLocation(true)} className="bg-white text-green-700 hover:bg-green-50 px-3 py-3 rounded-lg text-sm font-bold border border-green-300 transition-colors flex items-center justify-center gap-2 w-full shadow-sm">
-                                <MapPinIcon className="w-5 h-5" /> דגום מיקום נוכחי עכשיו (GPS) 📍
-                              </button>
-                              <input type="text" className="w-full border border-gray-300 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-green-500 ltr-input bg-white text-left" value={newCabinetForm.wazeLink} onChange={(e) => setNewCabinetForm({...newCabinetForm, wazeLink: e.target.value})} placeholder="או הדבק כאן קישור ווייז ידנית..." dir="ltr" />
-                              {gpsStatus && <p className="text-xs text-green-600 font-medium mt-1">{gpsStatus}</p>}
-                            </div>
                           </div>
 
                           <div className="grid grid-cols-2 gap-4">
@@ -1250,20 +1197,7 @@
                                       )}
                                     </div>
 
-                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 mt-3">
-                                      <label className="block text-xs font-bold text-gray-600 mb-2">מיקום וניווט (Waze)</label>
-                                      <div className="flex flex-col gap-2">
-                                        <button onClick={() => handleGetLocation(false)} className="bg-white text-green-700 hover:bg-green-50 px-3 py-2.5 rounded-lg text-sm font-bold border border-green-300 transition-colors flex items-center justify-center gap-2 w-full shadow-sm">
-                                          <MapPinIcon className="w-5 h-5" /> דגום מיקום נוכחי עכשיו (GPS) 📍
-                                        </button>
-                                        <div className="relative">
-                                          <input type="text" className="w-full border border-gray-300 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ltr-input bg-white text-left" value={editForm.wazeLink} onChange={(e) => setEditForm({...editForm, wazeLink: e.target.value})} placeholder="...או הדבק כאן קישור ווייז ידנית" dir="ltr" />
-                                        </div>
-                                        {gpsStatus && <p className="text-xs text-green-600 font-medium mt-1">{gpsStatus}</p>}
-                                      </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-2 gap-3 mt-3">
                                       <div>
                                         <label className="block text-xs font-bold text-gray-600 mb-1">תאריך התקנה</label>
                                         <input type="date" className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white" value={editForm.installationDate} onChange={(e) => handleInstallationDateChange(e, false)} />
