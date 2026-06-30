@@ -223,7 +223,15 @@
           const getWazeUrl = (cab) => {
             const query = `${cab.address || ''} ${cab.city || ''}`.trim();
             if (!query) return null;
-            return `https://www.waze.com/ul?q=${encodeURIComponent(query)}&navigate=yes`;
+            const encodedQuery = encodeURIComponent(query);
+            
+            // תיקון מיוחד לאנדרואיד - פקודת Intent שכופה על המכשיר לפתוח את האפליקציה עצמה
+            if (/Android/i.test(navigator.userAgent)) {
+                return `intent://waze.com/ul?q=${encodedQuery}&navigate=yes#Intent;package=com.waze;scheme=https;end`;
+            }
+            
+            // באייפון ובמחשב נמשיך להשתמש בקישור האוניברסלי שעובד מעולה
+            return `https://waze.com/ul?q=${encodedQuery}&navigate=yes`;
           };
 
           const [isLocalMode, setIsLocalMode] = useState(false);
@@ -922,7 +930,7 @@
                               </button>
 
                               {getWazeUrl(cabinet) && (
-                                <a href={getWazeUrl(cabinet)} target="_blank" rel="noopener noreferrer" className="bg-white hover:bg-gray-50 text-gray-700 p-1.5 sm:px-3 sm:py-1.5 rounded-lg flex items-center justify-center gap-1 transition-colors border border-gray-200 shadow-sm">
+                                <a href={getWazeUrl(cabinet)} target={/Android/i.test(navigator.userAgent) ? "_self" : "_blank"} rel="noopener noreferrer" className="bg-white hover:bg-gray-50 text-gray-700 p-1.5 sm:px-3 sm:py-1.5 rounded-lg flex items-center justify-center gap-1 transition-colors border border-gray-200 shadow-sm">
                                   <NavigationIcon className="w-4 h-4 text-blue-500" />
                                   <span className="text-[10px] sm:text-xs font-bold">ניווט</span>
                                 </a>
