@@ -237,6 +237,14 @@
             // 2. גיבוי: חיפוש לפי כתובת חופשית ועיר
             const query = `${cab.address || ''} ${cab.city || ''}`.trim();
             if (!query) return null;
+
+            // בדיקה אם הכתובת שהוזנה היא בעצם קואורדינטות (למשל אם המערכת השלימה אוטומטית כי אין שם רחוב)
+            const coordMatch = query.match(/^([-0-9.]+)\s*,\s*([-0-9.]+)$/);
+            if (coordMatch) {
+                if (isMobile) return `waze://?ll=${coordMatch[1]},${coordMatch[2]}&navigate=yes`;
+                return `https://www.waze.com/ul?ll=${coordMatch[1]},${coordMatch[2]}&navigate=yes`;
+            }
+
             const encodedQuery = encodeURIComponent(query);
             
             if (isMobile) {
@@ -453,17 +461,66 @@
             setGpsStatus('מחפש מיקום מדויק (GPS)... ⏳');
             if (navigator.geolocation) {
               navigator.geolocation.getCurrentPosition(
-                (position) => {
+                async (position) => {
                   const lat = position.coords.latitude;
                   const lng = position.coords.longitude;
                   const link = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
-                  if (isNew) {
-                      setNewCabinetForm(prev => ({...prev, wazeLink: link}));
-                  } else {
-                      setEditForm(prev => ({...prev, wazeLink: link}));
+                  const coordsText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                  
+                  setGpsStatus('מפענח כתובת מתוך המיקום... 🌍');
+                  
+                  try {
+                      // המרת נ.צ לכתובת אמתית בעברית ושליפה ישירות לשדות הטופס
+                      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=he`);
+                      const data = await res.json();
+                      
+                      let newCity = '';
+                      let newAddress = '';
+                      
+                      if (data && data.address) {
+                          newCity = data.address.city || data.address.town || data.address.village || data.address.municipality || '';
+                          const street = data.address.road || '';
+                          const house = data.address.house_number || '';
+                          newAddress = `${street} ${house}`.trim();
+                          
+                          if (!newAddress && data.display_name) {
+                              newAddress = data.display_name.split(',')[0];
+                          }
+                      }
+                      
+                      // אם זה שטח ללא רחוב מוגדר, רושמים את הקואורדינטות ככתובת
+                      if (!newAddress) {
+                          newAddress = coordsText; 
+                      }
+
+                      if (isNew) {
+                          setNewCabinetForm(prev => ({
+                              ...prev, 
+                              wazeLink: link,
+                              city: newCity || prev.city,
+                              address: newAddress || prev.address
+                          }));
+                      } else {
+                          setEditForm(prev => ({
+                              ...prev, 
+                              wazeLink: link,
+                              city: newCity || prev.city,
+                              address: newAddress || prev.address
+                          }));
+                      }
+                      setGpsStatus('✅ המיקום נשמר והכתובת הוקלדה אוטומטית!');
+                      setTimeout(() => setGpsStatus(''), 4000);
+
+                  } catch (e) {
+                      // במקרה שאין אינטרנט, המערכת תכתוב את הנ.צ במספרים בשדה הכתובת
+                      if (isNew) {
+                          setNewCabinetForm(prev => ({...prev, wazeLink: link, address: coordsText}));
+                      } else {
+                          setEditForm(prev => ({...prev, wazeLink: link, address: coordsText}));
+                      }
+                      setGpsStatus('✅ נ.צ נשמר בהצלחה והוזן לכתובת.');
+                      setTimeout(() => setGpsStatus(''), 4000);
                   }
-                  setGpsStatus('✅ המיקום נשמר! הנווט יוביל בדיוק לנקודה זו.');
-                  setTimeout(() => setGpsStatus(''), 4000);
                 },
                 (error) => {
                   setGpsStatus('❌ שגיאה: נא לאשר שירותי מיקום במכשיר.');
