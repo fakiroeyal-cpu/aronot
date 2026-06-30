@@ -219,19 +219,30 @@
             appId: "1:936688002844:web:61eb6c8fbd6c0ead043cd9"
           };
 
-          // יצירת קישור וויז חכם מבוסס כתובת ועיר (קישור עמוק עוקף דפדפן)
+          // יצירת קישור וויז חכם מבוסס כתובת ועיר או מיקום מדויק
           const getWazeUrl = (cab) => {
+            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            
+            // 1. עדיפות עליונה: מיקום GPS מדויק שנדגם בשטח
+            if (cab.wazeLink && cab.wazeLink.includes('ll=')) {
+                const match = cab.wazeLink.match(/ll=([0-9.-]+),([0-9.-]+)/);
+                if (match) {
+                    if (isMobile) {
+                        return `waze://?ll=${match[1]},${match[2]}&navigate=yes`;
+                    }
+                    return `https://www.waze.com/ul?ll=${match[1]},${match[2]}&navigate=yes`;
+                }
+            }
+            
+            // 2. גיבוי: חיפוש לפי כתובת חופשית ועיר
             const query = `${cab.address || ''} ${cab.city || ''}`.trim();
             if (!query) return null;
             const encodedQuery = encodeURIComponent(query);
             
-            // שימוש ב"קישור עמוק" (Deep Link) שעוקף לחלוטין את הדפדפן ופונה ישירות לאפליקציה בטלפון
-            if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+            if (isMobile) {
                 return `waze://?q=${encodedQuery}&navigate=yes`;
             }
-            
-            // במחשב נישאר עם הקישור הרגיל
-            return `https://waze.com/ul?q=${encodedQuery}&navigate=yes`;
+            return `https://www.waze.com/ul?q=${encodedQuery}&navigate=yes`;
           };
 
           const [isLocalMode, setIsLocalMode] = useState(false);
@@ -356,6 +367,8 @@
           const [isUploadingImg, setIsUploadingImg] = useState(false);
           const [fullScreenImage, setFullScreenImage] = useState(null);
           
+          const [gpsStatus, setGpsStatus] = useState(''); // החזרנו את הסטטוס למיקום
+          
           const [toastMsg, setToastMsg] = useState(null);
           const [cabinetToDelete, setCabinetToDelete] = useState(null);
 
@@ -434,6 +447,33 @@
               };
               reader.readAsDataURL(file);
             }, 50); 
+          };
+
+          const handleGetLocation = (isNew = false) => {
+            setGpsStatus('מחפש מיקום מדויק (GPS)... ⏳');
+            if (navigator.geolocation) {
+              navigator.geolocation.getCurrentPosition(
+                (position) => {
+                  const lat = position.coords.latitude;
+                  const lng = position.coords.longitude;
+                  const link = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+                  if (isNew) {
+                      setNewCabinetForm(prev => ({...prev, wazeLink: link}));
+                  } else {
+                      setEditForm(prev => ({...prev, wazeLink: link}));
+                  }
+                  setGpsStatus('✅ המיקום נשמר! הנווט יוביל בדיוק לנקודה זו.');
+                  setTimeout(() => setGpsStatus(''), 4000);
+                },
+                (error) => {
+                  setGpsStatus('❌ שגיאה: נא לאשר שירותי מיקום במכשיר.');
+                  setTimeout(() => setGpsStatus(''), 4000);
+                },
+                { enableHighAccuracy: true }
+              );
+            } else {
+              setGpsStatus('❌ הדפדפן שלך לא תומך במיקום.');
+            }
           };
 
           const handleInstallationDateChange = (e, isNew = false) => {
@@ -581,7 +621,6 @@
                 showToast("הדיווח נשמר בענן והארון הוקפץ לראש הרשימה!");
             }
           };
-
           const handleDeleteNote = async (noteIndex) => {
             if (!activeCabinet) return;
             const updatedNotes = (activeCabinet.notes || []).filter((_, i) => i !== noteIndex);
@@ -601,6 +640,7 @@
             if (!cabinet) return;
             setSelectedCabinetId(cabinet.id);
             setIsEditingInfo(false);
+            setGpsStatus(''); // עכשיו זה יעבוד ולא יקרוס
           };
 
           const startEditing = () => {
@@ -1009,6 +1049,18 @@
                                 </div>
                               </div>
                             </div>
+                            
+                            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 mt-4">
+                              <label className="block text-sm font-bold text-blue-900 mb-2">מיקום מדויק לניווט (כמו בוואטסאפ)</label>
+                              <p className="text-xs text-blue-700 mb-3">נמצא ליד הארון? דגום מיקום כדי שהטכנאים יגיעו בדיוק לנקודה הזו (מומלץ).</p>
+                              <button type="button" onClick={() => handleGetLocation(true)} className="bg-white text-blue-700 hover:bg-blue-50 px-3 py-2.5 rounded-lg text-sm font-bold border border-blue-300 transition-colors flex items-center justify-center gap-2 w-full shadow-sm">
+                                <MapPinIcon className="w-5 h-5" /> דגום ושמור מיקום נוכחי
+                              </button>
+                              {gpsStatus && <p className="text-xs text-blue-600 font-medium mt-2 text-center">{gpsStatus}</p>}
+                              {newCabinetForm.wazeLink && !gpsStatus && (
+                                 <p className="text-xs text-green-600 font-bold mt-2 text-center">✓ נ.צ מדויק נשמר בהצלחה</p>
+                              )}
+                            </div>
                           </div>
 
                           <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
@@ -1178,6 +1230,18 @@
                                             )}
                                           </div>
                                         </div>
+                                      </div>
+                                      
+                                      <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 mt-3">
+                                        <label className="block text-xs font-bold text-blue-900 mb-1">מיקום מדויק לניווט (כמו בוואטסאפ)</label>
+                                        <p className="text-[10px] text-blue-700 mb-2">דגום מיקום כדי לעדכן את נקודת הניווט למקום עמידתך הנוכחי.</p>
+                                        <button type="button" onClick={() => handleGetLocation(false)} className="bg-white text-blue-700 hover:bg-blue-50 px-3 py-2 rounded-lg text-xs font-bold border border-blue-300 transition-colors flex items-center justify-center gap-2 w-full shadow-sm">
+                                          <MapPinIcon className="w-4 h-4" /> עדכן מיקום נוכחי לארון
+                                        </button>
+                                        {gpsStatus && <p className="text-[10px] text-blue-600 font-medium mt-1.5 text-center">{gpsStatus}</p>}
+                                        {editForm.wazeLink && !gpsStatus && (
+                                           <p className="text-[10px] text-green-600 font-bold mt-1.5 text-center">✓ יש מיקום מדויק שמור לארון זה</p>
+                                        )}
                                       </div>
                                     </div>
 
