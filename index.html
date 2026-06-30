@@ -198,7 +198,9 @@
             }
             const map = mapInstance.current;
             map.eachLayer((layer) => { if (layer instanceof window.L.Marker) map.removeLayer(layer); });
+            
             const boundsCoords = [];
+            const seenCoords = {}; // רובוט שזוכר אילו נקודות כבר צוירו במפה
 
             cabinets.forEach(cab => {
               let lat = cab.lat || null;
@@ -212,6 +214,20 @@
               }
               
               if (lat && lng) {
+                // --- מנגנון חכם לפיזור סיכות חופפות (לארונות באותה כתובת בדיוק) ---
+                let key = `${lat.toFixed(5)},${lng.toFixed(5)}`; // מעגלים קלות כדי למצוא חפיפות קרובות
+                if (seenCoords[key]) {
+                    let count = seenCoords[key];
+                    let angle = count * 0.5 * Math.PI; // מזיז ב-90 מעלות כל ארון נוסף
+                    let radius = 0.00015 * Math.ceil(count / 4); // מרווח פיזי שגדל ככל שיש יותר ארונות
+                    lat += Math.cos(angle) * radius;
+                    lng += Math.sin(angle) * radius;
+                    seenCoords[key]++;
+                } else {
+                    seenCoords[key] = 1;
+                }
+                // -----------------------------------------------------------------
+
                 boundsCoords.push([lat, lng]);
                 const effectiveStatus = getEffectiveStatus(cab);
                 const typeInfo = getCabinetType(cab);
