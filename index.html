@@ -219,6 +219,26 @@
             appId: "1:936688002844:web:61eb6c8fbd6c0ead043cd9"
           };
 
+          // מנגנון תיקון קישורי וויז חכם המונע שגיאות "משהו השתבש"
+          const getValidWazeLink = (link) => {
+            if (!link) return '';
+            let cleanLink = link.trim();
+            // אם המשתמש הדביק טקסט שמכיל בתוכו קישור תקין, נשלוף רק אותו
+            const urlMatch = cleanLink.match(/(https?:\/\/[^\s]+)/);
+            if (urlMatch) return urlMatch[0];
+            if (cleanLink.startsWith('waze://')) return cleanLink;
+            // אם המשתמש הדביק קואורדינטות נקיות
+            if (/^[-0-9.]+\s*,\s*[-0-9.]+$/.test(cleanLink)) {
+                return `https://www.waze.com/ul?ll=${cleanLink.replace(/\s/g, '')}&navigate=yes`;
+            }
+            // אם המשתמש הדביק קישור בלי https
+            if (cleanLink.toLowerCase().includes('waze.com') || cleanLink.toLowerCase().includes('maps.app.goo.gl') || cleanLink.toLowerCase().includes('google.com/maps')) {
+                return `https://${cleanLink}`;
+            }
+            // אם המשתמש כתב סתם כתובת טקסט חופשי (כמו "דיזנגוף 50"), נהפוך את זה לחיפוש בוויז
+            return `https://www.waze.com/ul?q=${encodeURIComponent(cleanLink)}&navigate=yes`;
+          };
+
           const [isLocalMode, setIsLocalMode] = useState(false);
           const [authError, setAuthError] = useState(false);
           
@@ -429,7 +449,7 @@
                 (position) => {
                   const lat = position.coords.latitude;
                   const lng = position.coords.longitude;
-                  const link = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+                  const link = `https://www.waze.com/ul?ll=${lat},${lng}&navigate=yes`;
                   if (isNew) {
                       setNewCabinetForm(prev => ({...prev, wazeLink: link}));
                   } else {
@@ -944,7 +964,7 @@
                               </button>
 
                               {cabinet.wazeLink && (
-                                <a href={cabinet.wazeLink.startsWith('http') ? cabinet.wazeLink : `https://${cabinet.wazeLink}`} target="_blank" rel="noopener noreferrer" className="bg-white hover:bg-gray-50 text-gray-700 p-1.5 sm:px-3 sm:py-1.5 rounded-lg flex items-center justify-center gap-1 transition-colors border border-gray-200 shadow-sm">
+                                <a href={getValidWazeLink(cabinet.wazeLink)} target="_blank" rel="noopener noreferrer" className="bg-white hover:bg-gray-50 text-gray-700 p-1.5 sm:px-3 sm:py-1.5 rounded-lg flex items-center justify-center gap-1 transition-colors border border-gray-200 shadow-sm">
                                   <NavigationIcon className="w-4 h-4 text-blue-500" />
                                   <span className="text-[10px] sm:text-xs font-bold">ניווט</span>
                                 </a>
